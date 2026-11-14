@@ -1,0 +1,1245 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Полигон: школа 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: single reading column (~72ch) with wide "viewport" panels that break out for live 3D demos */
+:root{
+  --bg:#eceff3; --panel:#ffffff; --fg:#18202c; --muted:#5a6577; --line:#d3d9e2;
+  --accent:#e2741b; --accent-ink:#ffffff; --accent-soft:#fbe7d4; --mesh:#9aa7b8; --wire:#2b3443; --grid:#b9c2cf;
+  --ax-x:#d8434b; --ax-y:#5a9e2f; --ax-z:#3672d6;
+  --f-display:"Unbounded","Segoe UI",system-ui,sans-serif;
+  --f-body:"Golos Text","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161a21; --panel:#1f252f; --fg:#e6eaf0; --muted:#98a3b4; --line:#323b48;
+  --accent:#f08a35; --accent-ink:#1a1208; --accent-soft:#3b2a1b; --mesh:#6d7a8c; --wire:#d5dce6; --grid:#3a4452;
+  --ax-x:#ef5b62; --ax-y:#7cc24c; --ax-z:#5b93f0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#161a21; --panel:#1f252f; --fg:#e6eaf0; --muted:#98a3b4; --line:#323b48;
+  --accent:#f08a35; --accent-ink:#1a1208; --accent-soft:#3b2a1b; --mesh:#6d7a8c; --wire:#d5dce6; --grid:#3a4452;
+  --ax-x:#ef5b62; --ax-y:#7cc24c; --ax-z:#5b93f0; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.65 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:72px}
+.read{max-width:72ch}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.2;margin:0}
+h1{font-size:clamp(30px,5.2vw,56px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:clamp(22px,3vw,30px);font-weight:700}
+h3{font-size:17px;font-weight:500}
+p{margin:0}
+.stack{display:flex;flex-direction:column;gap:16px}
+.eyebrow{font:600 12px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.muted{color:var(--muted)}
+a{color:var(--accent)}
+kbd{font:600 13px/1 var(--f-mono);padding:4px 7px;border:1px solid var(--line);border-bottom-width:3px;border-radius:6px;background:var(--panel);white-space:nowrap}
+code{font:14px var(--f-mono);background:var(--panel);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding-block:20px;border-bottom:1px solid var(--line)}
+.logo{font:700 16px var(--f-display);display:flex;align-items:center;gap:10px}
+.logo svg{width:22px;height:22px}
+nav.toc{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px}
+nav.toc a{color:var(--muted);text-decoration:none}
+nav.toc a:hover{color:var(--fg)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:32px;align-items:center;margin-top:-24px}
+.hero .stack{gap:20px}
+.lead{font-size:18px;color:var(--muted)}
+@media (max-width:820px){.hero{grid-template-columns:1fr}}
+
+/* viewport panel */
+.vp{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.vp-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--line);font:13px var(--f-mono);color:var(--muted)}
+.vp canvas{display:block;width:100%;height:380px;touch-action:none;cursor:grab}
+.vp canvas:active{cursor:grabbing}
+.stats{display:flex;gap:14px;font-variant-numeric:tabular-nums}
+.stats b{color:var(--fg);font-weight:600}
+.ctrls{display:flex;flex-direction:column;gap:12px;padding:14px;border-top:1px solid var(--line)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row label.lbl{font:12px var(--f-mono);color:var(--muted);min-width:76px;text-transform:uppercase;letter-spacing:.08em}
+.seg button,.tog{font:500 14px var(--f-body);color:var(--fg);background:transparent;border:1px solid var(--line);padding:6px 12px;border-radius:8px;cursor:pointer}
+.seg button[aria-pressed="true"],.tog[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+input[type=range]{accent-color:var(--accent);flex:1;min-width:120px}
+.val{font:13px var(--f-mono);min-width:3ch;text-align:right;font-variant-numeric:tabular-nums}
+.axes{display:flex;gap:10px;font:600 12px var(--f-mono)}
+.axes .x{color:var(--ax-x)}.axes .y{color:var(--ax-y)}.axes .z{color:var(--ax-z)}
+
+/* anatomy */
+.trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px}
+.trio > div{display:flex;flex-direction:column;gap:8px;padding-top:16px;border-top:2px solid var(--fg)}
+.trio svg{width:100%;height:110px}
+
+/* pipeline */
+ol.pipe{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;counter-reset:p}
+ol.pipe li{background:var(--panel);padding:18px;display:flex;flex-direction:column;gap:6px;counter-increment:p}
+ol.pipe li::before{content:counter(p,decimal-leading-zero);font:600 12px var(--f-mono);color:var(--accent)}
+ol.pipe li span{font-size:14px;color:var(--muted)}
+
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.k{white-space:nowrap}
+.tag{font:600 11px var(--f-mono);padding:2px 7px;border-radius:99px;border:1px solid var(--line);white-space:nowrap}
+.tag.free{border-color:var(--ax-y);color:var(--ax-y)}
+
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.cols > *{min-width:0}
+.hk-group h3{margin-bottom:10px}
+
+/* modifiers */
+.mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px 28px}
+.mods div{display:flex;flex-direction:column;gap:4px}
+.mods h3{font-family:var(--f-mono);font-size:15px;font-weight:600}
+
+.uv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:center}
+@media (max-width:760px){.uv{grid-template-columns:1fr}}
+.uv svg{width:100%;max-width:360px}
+
+ul.check{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px}
+ul.check li{display:flex;gap:12px}
+ul.check li::before{content:"";flex:none;width:14px;height:14px;margin-top:5px;border:2px solid var(--accent);border-radius:3px}
+
+.err{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.err div{padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);display:flex;flex-direction:column;gap:6px}
+.err b{font-family:var(--f-display);font-weight:500;font-size:15px}
+.fix{font-size:14px}
+.fix::before{content:"Как чинить: ";font-weight:600;color:var(--accent)}
+
+.graph{display:block;width:100%;height:150px;border-top:1px solid var(--line)}
+.legend{display:flex;gap:14px;font:12px var(--f-mono);color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:3px;vertical-align:middle;margin-right:6px}
+.seg select{font:500 14px var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);padding:6px 10px;border-radius:8px}
+.ctrls input[type=text]{font:14px var(--f-mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;min-width:0;flex:1;max-width:260px}
+.tog:disabled,.seg button:disabled{opacity:.45;cursor:not-allowed}
+label.tog{display:inline-block}
+.status{font-size:14px;color:var(--muted)}
+#cStudio{height:480px}
+.tog.primary{border-color:var(--accent);color:var(--accent);font-weight:600}
+.wiz{background:var(--accent-soft);border-radius:10px;padding:10px 12px}
+.wiz p{flex:1 1 260px;font-weight:500}
+.ui-map{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:28px;align-items:start}
+@media (max-width:820px){.ui-map{grid-template-columns:1fr}}
+.ui-map svg{width:100%;height:auto}
+ol.legend-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;counter-reset:u}
+ol.legend-list li{display:grid;grid-template-columns:28px 1fr;gap:10px;counter-increment:u}
+ol.legend-list li::before,ol.lesson li::before{content:counter(u);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font:600 12px var(--f-mono)}
+ol.lesson{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:16px;counter-reset:u;max-width:80ch}
+ol.lesson li{display:grid;grid-template-columns:28px 1fr;gap:12px;counter-increment:u}
+ol.lesson li > div{display:flex;flex-direction:column;gap:4px;min-width:0}
+footer{border-top:1px solid var(--line);padding-top:20px;font-size:14px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 21 7v10l-9 5-9-5V7z"/><path d="M12 22V12M21 7l-9 5-9-5"/></svg>Полигон</div>
+  <nav class="toc" aria-label="Разделы">
+    <a href="#anatomy">Из чего модель</a><a href="#pipeline">Этапы</a><a href="#tools">Программы</a>
+    <a href="#blender">Blender с нуля</a><a href="#keys">Горячие клавиши</a><a href="#edit">Редактирование</a><a href="#uv">UV и текстуры</a><a href="#rig">Скелет</a><a href="#anim">Анимация</a><a href="#studio">Мастерская</a>
+    <a href="#export">Экспорт</a><a href="#mistakes">Ошибки</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="stack">
+    <span class="eyebrow">Учебник для новичков</span>
+    <h1>Как устроены, создаются и правятся 3D-модели</h1>
+    <p class="lead">Любая 3D-модель — это набор точек в пространстве, соединённых в треугольники. Покрутите фигуру справа мышью, включите сетку и точки, потяните ползунок детализации. Дальше разберём, как такие фигуры делают в Blender и отправляют в игровой движок.</p>
+    <p class="muted" style="font-size:14px">Мышь: левая кнопка — вращать, колесо — приблизить, правая — сдвинуть. На телефоне — пальцами.</p>
+  </div>
+
+  <div class="vp" aria-label="Интерактивный 3D-просмотр">
+    <div class="vp-head">
+      <div class="stats"><span>вершин <b id="sV">0</b></span><span>треугольников <b id="sT">0</b></span></div>
+      <div class="axes" title="Оси: X красная, Y зелёная, Z синяя"><span class="x">X</span><span class="y">Y</span><span class="z">Z</span></div>
+    </div>
+    <canvas id="cMain"></canvas>
+    <div class="ctrls">
+      <div class="row seg" id="shapes" role="group" aria-label="Фигура">
+        <label class="lbl">Фигура</label>
+        <button data-s="cube" aria-pressed="true">Куб</button>
+        <button data-s="sphere" aria-pressed="false">UV-сфера</button>
+        <button data-s="ico" aria-pressed="false">Икосфера</button>
+        <button data-s="cyl" aria-pressed="false">Цилиндр</button>
+        <button data-s="torus" aria-pressed="false">Тор</button>
+      </div>
+      <div class="row">
+        <label class="lbl" for="detail">Детали</label>
+        <input id="detail" type="range" min="1" max="6" value="1"><span class="val" id="detailV">1</span>
+      </div>
+      <div class="row" role="group" aria-label="Отображение">
+        <label class="lbl">Показать</label>
+        <button class="tog" id="tFaces" aria-pressed="true">Грани</button>
+        <button class="tog" id="tWire" aria-pressed="true">Сетку</button>
+        <button class="tog" id="tVerts" aria-pressed="false">Вершины</button>
+        <button class="tog" id="tFlat" aria-pressed="true">Плоское затенение</button>
+        <button class="tog" id="tCheck" aria-pressed="false">UV-шахматку</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="anatomy" class="stack">
+  <span class="eyebrow">Основа</span>
+  <h2>Из чего состоит модель</h2>
+  <p class="read">Модель в 3D называют <b>мешем</b> (mesh — «сетка»). У неё три уровня, и в редакторе вы можете выбирать и двигать каждый из них отдельно.</p>
+  <div class="trio">
+    <div>
+      <svg viewBox="0 0 200 110" aria-hidden="true"><g fill="var(--accent)"><circle cx="40" cy="80" r="6"/><circle cx="100" cy="20" r="6"/><circle cx="160" cy="80" r="6"/></g></svg>
+      <h3>Вершина (vertex)</h3>
+      <p class="muted">Точка с координатами X, Y, Z. Всё остальное строится из вершин. Сдвинули вершину — изменилась форма.</p>
+    </div>
+    <div>
+      <svg viewBox="0 0 200 110" aria-hidden="true"><path d="M40 80 100 20 160 80Z" fill="none" stroke="var(--accent)" stroke-width="4"/><g fill="var(--fg)"><circle cx="40" cy="80" r="4"/><circle cx="100" cy="20" r="4"/><circle cx="160" cy="80" r="4"/></g></svg>
+      <h3>Ребро (edge)</h3>
+      <p class="muted">Линия между двумя вершинами. Цепочка рёбер вокруг формы называется <b>петлёй</b> (edge loop).</p>
+    </div>
+    <div>
+      <svg viewBox="0 0 200 110" aria-hidden="true"><path d="M40 80 100 20 160 80Z" fill="var(--accent)" fill-opacity=".35" stroke="var(--fg)" stroke-width="2"/></svg>
+      <h3>Грань (face)</h3>
+      <p class="muted">Заполненная поверхность между рёбрами. Треугольник — «трис», четырёхугольник — «квад», больше 4 углов — «нгон».</p>
+    </div>
+  </div>
+  <div class="read stack">
+    <p>Видеокарта рисует только треугольники. Поэтому движок при импорте режет каждый квад на два треугольника. Счётчик над вьюером показывает именно треугольники: это главная мера «тяжести» модели.</p>
+    <p>Работать удобнее квадами: петли рёбер идут ровно, сглаживание ведёт себя предсказуемо. Нгоны допустимы на плоских местах, где модель не гнётся.</p>
+    <p><b>Нормаль</b> — невидимая стрелка, которая показывает, куда «смотрит» грань. По ней считается освещение. Кнопка «Плоское затенение» во вьюере переключает Shade Flat и Shade Smooth: с плоским видна каждая грань (стиль low-poly), с гладким свет перетекает плавно при том же числе треугольников.</p>
+  </div>
+</section>
+
+<section id="pipeline" class="stack">
+  <span class="eyebrow">Процесс</span>
+  <h2>Этапы создания модели</h2>
+  <p class="read">Так выглядит путь модели от идеи до игры. Простому предмету хватит 1, 3, 6, 7 и 10. Персонажу нужны почти все этапы.</p>
+  <ol class="pipe">
+    <li><h3>Референсы</h3><span>Картинки с нескольких сторон: спереди, сбоку, сверху. Их кладут фоном прямо во вьюпорт.</span></li>
+    <li><h3>Блокинг</h3><span>Грубая форма из кубов и цилиндров. Проверяем пропорции, пока детали не мешают.</span></li>
+    <li><h3>Моделирование</h3><span>Выдавливание, разрезы, фаски. Из грубой формы получается чистая сетка.</span></li>
+    <li><h3>Скульптинг</h3><span>Лепка кистями, как из глины: складки, мышцы. Даёт миллионы полигонов.</span></li>
+    <li><h3>Ретопология</h3><span>Поверх скульпта строим лёгкую сетку с хорошими петлями для игры.</span></li>
+    <li><h3>UV-развёртка</h3><span>Режем модель по швам и раскладываем на плоскость, как выкройку.</span></li>
+    <li><h3>Текстуры</h3><span>Рисуем цвет, шероховатость, металл. Детали скульпта запекаются в карту нормалей.</span></li>
+    <li><h3>Риггинг</h3><span>Ставим скелет из костей и привязываем к ним вершины (веса).</span></li>
+    <li><h3>Анимация</h3><span>Двигаем кости по ключевым кадрам: ходьба, удар, смерть.</span></li>
+    <li><h3>Экспорт</h3><span>Сохраняем в FBX или glTF и проверяем в движке.</span></li>
+  </ol>
+</section>
+
+<section id="tools" class="stack">
+  <span class="eyebrow">Инструменты</span>
+  <h2>Программы</h2>
+  <p class="read">Начинать лучше с <a href="https://www.blender.org" target="_blank" rel="noopener">Blender</a>: бесплатный и умеет всё из списка этапов. Остальное подключают, когда упираются в его пределы.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Программа</th><th>Для чего</th><th>Цена</th></tr></thead>
+    <tbody>
+      <tr><td><b>Blender</b></td><td>Всё: моделирование, скульпт, UV, текстуры, риг, анимация, рендер</td><td><span class="tag free">бесплатно</span></td></tr>
+      <tr><td><b>VRoid Studio</b></td><td>Аниме-персонажи через ползунки и рисование волос, без моделирования</td><td><span class="tag free">бесплатно</span></td></tr>
+      <tr><td><b>Blockbench</b></td><td>Простые low-poly и «кубические» модели с пиксельными текстурами</td><td><span class="tag free">бесплатно</span></td></tr>
+      <tr><td><b>MagicaVoxel</b></td><td>Воксельные модели: рисуете кубиками, как в конструкторе</td><td><span class="tag free">бесплатно</span></td></tr>
+      <tr><td><b>ZBrush</b></td><td>Профессиональный скульптинг с огромной детализацией</td><td><span class="tag">платно</span></td></tr>
+      <tr><td><b>Substance 3D Painter</b></td><td>Рисование текстур прямо по модели, слоями</td><td><span class="tag">платно</span></td></tr>
+      <tr><td><b>Maya, 3ds Max</b></td><td>Индустриальный стандарт студий: анимация, моделирование</td><td><span class="tag">платно</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="blender" class="stack">
+  <span class="eyebrow">Blender с нуля</span>
+  <h2>Первое знакомство с Blender</h2>
+  <p class="read">Blender скачивается бесплатно с <a href="https://www.blender.org/download/" target="_blank" rel="noopener">blender.org/download</a>. Есть обычный установщик и portable-версия в zip: её достаточно распаковать в любую папку. При первом запуске откроется сцена с кубом, камерой и лампой. Кликните мимо заставки, чтобы её закрыть.</p>
+
+  <div class="ui-map">
+    <svg viewBox="0 0 640 340" role="img" aria-label="Схема окна Blender: верхняя панель, инструменты, 3D-вьюпорт, боковая панель, Outliner, Properties, Timeline">
+      <g stroke="var(--line)" stroke-width="2" fill="var(--panel)">
+        <rect x="1" y="1" width="638" height="28" rx="4"/>
+        <rect x="1" y="33" width="38" height="250" rx="4"/>
+        <rect x="43" y="33" width="413" height="250" rx="4"/>
+        <rect x="460" y="33" width="179" height="110" rx="4"/>
+        <rect x="460" y="147" width="179" height="192" rx="4"/>
+        <rect x="1" y="287" width="455" height="52" rx="4"/>
+      </g>
+      <rect x="392" y="60" width="58" height="120" rx="3" fill="var(--bg)" stroke="var(--line)"/>
+      <g stroke="var(--grid)"><line x1="60" y1="240" x2="380" y2="240"/><line x1="100" y1="215" x2="340" y2="215"/><line x1="140" y1="195" x2="300" y2="195"/></g>
+      <g stroke="var(--fg)" stroke-width="2" fill="var(--mesh)" stroke-linejoin="round">
+        <path d="M220 130 270 110 320 130 270 150Z" fill-opacity=".5"/><path d="M220 130 220 190 270 210 270 150Z"/><path d="M270 150 270 210 320 190 320 130Z" fill-opacity=".8"/>
+      </g>
+      <g fill="var(--muted)"><rect x="10" y="45" width="20" height="16" rx="3"/><rect x="10" y="67" width="20" height="16" rx="3"/><rect x="10" y="89" width="20" height="16" rx="3"/><rect x="10" y="111" width="20" height="16" rx="3"/></g>
+      <g fill="var(--muted)"><rect x="470" y="50" width="120" height="7" rx="3"/><rect x="480" y="66" width="90" height="7" rx="3"/><rect x="480" y="82" width="100" height="7" rx="3"/><rect x="480" y="98" width="80" height="7" rx="3"/></g>
+      <g fill="var(--muted)"><rect x="466" y="160" width="12" height="12" rx="2"/><rect x="466" y="180" width="12" height="12" rx="2"/><rect x="466" y="200" width="12" height="12" rx="2"/><rect x="466" y="220" width="12" height="12" rx="2"/><rect x="490" y="162" width="130" height="7" rx="3"/><rect x="490" y="180" width="100" height="7" rx="3"/></g>
+      <g stroke="var(--muted)"><line x1="20" y1="320" x2="440" y2="320"/></g><line x1="160" y1="300" x2="160" y2="334" stroke="var(--accent)" stroke-width="2"/>
+      <g font-family="JetBrains Mono,monospace" font-size="10" fill="var(--muted)"><text x="10" y="19">File Edit Render …</text><text x="200" y="19">Layout · Modeling · Sculpting · UV Editing · Shading · Animation</text></g>
+      <g font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" text-anchor="middle">
+        <circle cx="620" cy="15" r="10" fill="var(--accent)"/><text x="620" y="19" fill="var(--accent-ink)">1</text>
+        <circle cx="20" cy="150" r="10" fill="var(--accent)"/><text x="20" y="154" fill="var(--accent-ink)">2</text>
+        <circle cx="70" cy="60" r="10" fill="var(--accent)"/><text x="70" y="64" fill="var(--accent-ink)">3</text>
+        <circle cx="421" cy="195" r="10" fill="var(--accent)"/><text x="421" y="199" fill="var(--accent-ink)">4</text>
+        <circle cx="620" cy="125" r="10" fill="var(--accent)"/><text x="620" y="129" fill="var(--accent-ink)">5</text>
+        <circle cx="620" cy="320" r="10" fill="var(--accent)"/><text x="620" y="324" fill="var(--accent-ink)">6</text>
+        <circle cx="436" cy="303" r="10" fill="var(--accent)"/><text x="436" y="307" fill="var(--accent-ink)">7</text>
+      </g>
+    </svg>
+    <ol class="legend-list">
+      <li><div><b>Верхняя панель.</b> Меню File (сохранить, экспорт) и вкладки рабочих пространств. Вкладка — готовая раскладка окон под задачу: Modeling для моделирования, Animation для анимации.</div></li>
+      <li><div><b>Инструменты</b> (<kbd>T</kbd> скрыть/показать). Выделение, перемещение, поворот, масштаб. В режиме редактирования добавятся выдавливание, нож и другие.</div></li>
+      <li><div><b>3D-вьюпорт.</b> Сама сцена. Слева сверху переключатель режимов (Object Mode, Edit Mode…), справа сверху — вид: каркас, сплошной, с материалами (<kbd>Z</kbd>).</div></li>
+      <li><div><b>Боковая панель</b> (<kbd>N</kbd>). Точные цифры: положение, поворот и размер выбранного объекта.</div></li>
+      <li><div><b>Outliner.</b> Список всех объектов сцены деревом. Глаз скрывает объект, клик по имени выбирает его.</div></li>
+      <li><div><b>Properties.</b> Настройки по вкладкам-иконкам: гаечный ключ — модификаторы, шар — материал, зелёный треугольник — данные меша (UV, группы вершин), фигурка — скелет.</div></li>
+      <li><div><b>Timeline.</b> Кадры анимации, кнопка воспроизведения и ромбики ключей.</div></li>
+    </ol>
+  </div>
+
+  <div class="cols">
+    <div class="stack">
+      <h3>Режимы работы</h3>
+      <p class="muted">Один и тот же объект правят в разных режимах. Переключатель — слева сверху во вьюпорте или <kbd>Ctrl</kbd>+<kbd>Tab</kbd> (круговое меню).</p>
+      <div class="tbl"><table><tbody>
+        <tr><td><b>Object Mode</b></td><td>Двигать, вращать, масштабировать объекты целиком. Режим по умолчанию.</td></tr>
+        <tr><td><b>Edit Mode</b> <kbd>Tab</kbd></td><td>Править саму сетку: вершины, рёбра, грани.</td></tr>
+        <tr><td><b>Sculpt Mode</b></td><td>Лепить кистями, как из глины.</td></tr>
+        <tr><td><b>Texture Paint</b></td><td>Рисовать цвет прямо по модели.</td></tr>
+        <tr><td><b>Weight Paint</b></td><td>Рисовать влияние костей на вершины.</td></tr>
+        <tr><td><b>Pose Mode</b></td><td>Только у скелета: ставить позы и анимировать.</td></tr>
+      </tbody></table></div>
+    </div>
+    <div class="stack">
+      <h3>Настройки, которые стоит сделать сразу</h3>
+      <p class="muted">Всё здесь: Edit → Preferences.</p>
+      <ul class="check">
+        <li><b>Ноутбук без колеса мыши:</b> Input → Emulate 3 Button Mouse. Вид будет вращаться через <kbd>Alt</kbd> + левая кнопка.</li>
+        <li><b>Нет цифрового блока:</b> Input → Emulate Numpad. Тогда виды переключают обычные цифры <kbd>1</kbd> <kbd>3</kbd> <kbd>7</kbd>.</li>
+        <li><b>Язык:</b> Interface → Translation. Русский есть, но почти все уроки на YouTube идут с английским интерфейсом. На этом сайте названия тоже английские, поэтому удобнее оставить английский.</li>
+        <li><b>Сохраняйте</b> <kbd>Ctrl</kbd>+<kbd>S</kbd> почаще. Если Blender вылетел — File → Recover → Auto Save.</li>
+        <li><b>Отмена</b> <kbd>Ctrl</kbd>+<kbd>Z</kbd>, повтор <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="stack">
+    <h3>Урок: меч из куба за 15 минут</h3>
+    <p class="read muted">Держите курсор над 3D-окном. Числа набирайте прямо на клавиатуре сразу после клавиши и подтверждайте <kbd>Enter</kbd>. Никуда тащить мышью не нужно.</p>
+    <ol class="lesson">
+      <li><div><b>Новый файл.</b> File → New → General. Кликните по кубу, нажмите <kbd>Tab</kbd> — вы в режиме редактирования, выделено всё.</div></li>
+      <li><div><b>Лезвие.</b> Сплющите и вытяните куб: <kbd>S</kbd> <kbd>X</kbd> <code>0.15</code> <kbd>Enter</kbd>, затем <kbd>S</kbd> <kbd>Y</kbd> <code>0.03</code> <kbd>Enter</kbd>. Получилась длинная тонкая пластина.</div></li>
+      <li><div><b>Остриё.</b> Нажмите <kbd>3</kbd> (выбор граней), <kbd>Num 1</kbd> (вид спереди), кликните верхнюю грань. <kbd>S</kbd> <code>0</code> <kbd>Enter</kbd> стянет её в точку, затем <kbd>G</kbd> <kbd>Z</kbd> <code>0.4</code> <kbd>Enter</kbd> поднимет остриё.</div></li>
+      <li><div><b>Гарда.</b> Покрутите вид и выберите нижнюю грань. <kbd>E</kbd> <code>0.08</code> <kbd>Enter</kbd> — выдавить вниз. Затем <kbd>S</kbd> <kbd>X</kbd> <code>3</code> <kbd>Enter</kbd> и <kbd>S</kbd> <kbd>Y</kbd> <code>2.5</code> <kbd>Enter</kbd> — поперечина готова.</div></li>
+      <li><div><b>Рукоять.</b> Не снимая выделения: <kbd>E</kbd> <code>0.05</code> <kbd>Enter</kbd>, <kbd>S</kbd> <code>0.3</code> <kbd>Enter</kbd> — сужение. Потом <kbd>E</kbd> <code>0.6</code> <kbd>Enter</kbd> — длинная рукоять.</div></li>
+      <li><div><b>Навершие.</b> <kbd>E</kbd> <code>0.05</code> <kbd>Enter</kbd>, <kbd>S</kbd> <code>1.8</code> <kbd>Enter</kbd>, <kbd>E</kbd> <code>0.1</code> <kbd>Enter</kbd>. Нажмите <kbd>Tab</kbd>, чтобы выйти в Object Mode.</div></li>
+      <li><div><b>Сглаживание по желанию.</b> Правый клик по мечу → Shade Flat оставит острые грани (стиль low-poly). Модификатор Bevel с маленьким Amount скруглит рёбра.</div></li>
+      <li><div><b>Цвет.</b> Properties → вкладка с шаром (Material) → New → Base Color. Посмотреть результат: <kbd>Z</kbd> → Material Preview.</div></li>
+      <li><div><b>Сохранить и выгрузить.</b> <kbd>Ctrl</kbd>+<kbd>S</kbd> сохранит <code>.blend</code>. File → Export → FBX или glTF — файл для игры. Этот же файл можно загрузить в «Мастерскую» ниже.</div></li>
+    </ol>
+    <p class="read muted">Что-то пошло не так — <kbd>Ctrl</kbd>+<kbd>Z</kbd>. Нажали не ту клавишу посреди команды — правый клик или <kbd>Esc</kbd> её отменит. Следующий шаг после меча — знаменитый урок «пончик» от Blender Guru на YouTube и официальное руководство <a href="https://docs.blender.org/manual/en/latest/" target="_blank" rel="noopener">docs.blender.org</a>.</p>
+  </div>
+</section>
+
+<section id="keys" class="stack">
+  <span class="eyebrow">Blender</span>
+  <h2>Горячие клавиши, без которых никуда</h2>
+  <p class="read">В Blender почти всё делается с клавиатуры. Курсор мыши должен быть над окном 3D-вида, иначе клавиша сработает в другом окне. Выучите первый столбец, этого хватит на первую модель.</p>
+  <div class="cols">
+    <div class="hk-group">
+      <h3>Навигация и режимы</h3>
+      <div class="tbl"><table><tbody>
+        <tr><td class="k"><kbd>СКМ</kbd></td><td>Вращать вид (зажать колесо)</td></tr>
+        <tr><td class="k"><kbd>Shift</kbd>+<kbd>СКМ</kbd></td><td>Сдвинуть вид</td></tr>
+        <tr><td class="k"><kbd>Колесо</kbd></td><td>Приблизить / отдалить</td></tr>
+        <tr><td class="k"><kbd>Num .</kbd></td><td>Показать выбранное крупно</td></tr>
+        <tr><td class="k"><kbd>Num 1</kbd> <kbd>3</kbd> <kbd>7</kbd></td><td>Вид спереди / сбоку / сверху</td></tr>
+        <tr><td class="k"><kbd>Tab</kbd></td><td>Объект ↔ режим редактирования</td></tr>
+        <tr><td class="k"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td><td>Выбор вершин / рёбер / граней (в режиме редактирования)</td></tr>
+        <tr><td class="k"><kbd>Alt</kbd>+<kbd>Z</kbd></td><td>Просвечивание (X-ray), чтобы выбирать сзади</td></tr>
+        <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Отменить</td></tr>
+      </tbody></table></div>
+    </div>
+    <div class="hk-group">
+      <h3>Трансформации и правка</h3>
+      <div class="tbl"><table><tbody>
+        <tr><td class="k"><kbd>G</kbd> <kbd>R</kbd> <kbd>S</kbd></td><td>Двигать / вращать / масштабировать. После — <kbd>X</kbd>, <kbd>Y</kbd> или <kbd>Z</kbd>, чтобы только по оси</td></tr>
+        <tr><td class="k"><kbd>Shift</kbd>+<kbd>A</kbd></td><td>Добавить фигуру</td></tr>
+        <tr><td class="k"><kbd>E</kbd></td><td>Выдавить (extrude)</td></tr>
+        <tr><td class="k"><kbd>I</kbd></td><td>Вставить грань внутрь (inset)</td></tr>
+        <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>R</kbd></td><td>Разрезать петлёй (loop cut)</td></tr>
+        <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td>Фаска (bevel)</td></tr>
+        <tr><td class="k"><kbd>K</kbd></td><td>Нож: нарезать рёбра вручную</td></tr>
+        <tr><td class="k"><kbd>Alt</kbd>+клик</td><td>Выбрать петлю рёбер целиком</td></tr>
+        <tr><td class="k"><kbd>M</kbd></td><td>Слить вершины</td></tr>
+        <tr><td class="k"><kbd>F</kbd></td><td>Заполнить дыру гранью</td></tr>
+        <tr><td class="k"><kbd>Shift</kbd>+<kbd>D</kbd></td><td>Дублировать</td></tr>
+        <tr><td class="k"><kbd>X</kbd></td><td>Удалить</td></tr>
+      </tbody></table></div>
+    </div>
+  </div>
+</section>
+
+<section id="edit" class="stack">
+  <span class="eyebrow">Практика</span>
+  <h2>Как редактируют: выдавливание и вставка</h2>
+  <p class="read">Почти любой предмет делают из куба двумя операциями. <kbd>I</kbd> (inset) вставляет внутрь грани меньшую грань. <kbd>E</kbd> (extrude) вытягивает её наружу, создавая новые стены. Так из куба получаются ножка стула, рукоять меча, труба. Потяните ползунки.</p>
+  <div class="vp">
+    <div class="vp-head"><span>режим редактирования · выбрана верхняя грань</span><div class="stats"><span>треугольников <b id="sT2">0</b></span></div></div>
+    <canvas id="cExt"></canvas>
+    <div class="ctrls">
+      <div class="row"><label class="lbl" for="inset">Inset <kbd>I</kbd></label><input id="inset" type="range" min="0" max="0.7" step="0.01" value="0.25"><span class="val" id="insetV">0.25</span></div>
+      <div class="row"><label class="lbl" for="extr">Extrude <kbd>E</kbd></label><input id="extr" type="range" min="0" max="1.6" step="0.01" value="0.8"><span class="val" id="extrV">0.80</span></div>
+    </div>
+  </div>
+  <div class="read stack">
+    <h3>Модификаторы: правки без разрушения</h3>
+    <p>Модификатор меняет модель «на лету», а исходная сетка остаётся нетронутой. Его можно выключить, поменять настройки или применить навсегда (<kbd>Ctrl</kbd>+<kbd>A</kbd> над модификатором). Добавляются на вкладке с гаечным ключом.</p>
+  </div>
+  <div class="mods">
+    <div><h3>Mirror</h3><p class="muted">Зеркалит половину. Лепите левую сторону лица — правая появится сама.</p></div>
+    <div><h3>Subdivision Surface</h3><p class="muted">Дробит и сглаживает сетку. Ползунок «Детали» во вьюере сверху делает похожее с фигурой.</p></div>
+    <div><h3>Bevel</h3><p class="muted">Скругляет острые углы. Даже маленькая фаска ловит свет и делает предмет реалистичнее.</p></div>
+    <div><h3>Solidify</h3><p class="muted">Даёт толщину плоской поверхности: плащ, лист, стенка бочки.</p></div>
+    <div><h3>Array</h3><p class="muted">Повторяет объект рядом: ступени, звенья цепи, забор.</p></div>
+    <div><h3>Boolean</h3><p class="muted">Вычитает или объединяет формы. Вырезать окно в стене одним кубом.</p></div>
+  </div>
+</section>
+
+<section id="uv" class="uv">
+  <div class="stack">
+    <span class="eyebrow">Поверхность</span>
+    <h2>UV-развёртка и текстуры</h2>
+    <p>Текстура — плоская картинка, а модель объёмная. Чтобы натянуть одно на другое, модель «разрезают» по швам и раскладывают на плоскость. Координаты на этой плоскости называют U и V, отсюда название.</p>
+    <p>В Blender: выбрать рёбра шва → <kbd>Ctrl</kbd>+<kbd>E</kbd> → Mark Seam → выделить всё <kbd>A</kbd> → <kbd>U</kbd> → Unwrap.</p>
+    <p>Включите «UV-шахматку» во вьюере вверху. Если квадратики везде одного размера и не вытянуты, развёртка хорошая. Растянутые клетки значат, что текстура там поплывёт.</p>
+    <p class="muted">Кроме цвета (Base Color) обычно делают карты шероховатости (Roughness), металличности (Metallic) и нормалей (Normal), которая рисует мелкий рельеф без лишних полигонов.</p>
+  </div>
+  <svg viewBox="0 0 280 210" role="img" aria-label="Развёртка куба: шесть квадратов, сложенных крестом">
+    <g stroke="var(--fg)" stroke-width="2" fill="var(--panel)">
+      <rect x="75" y="5" width="65" height="65"/><rect x="10" y="70" width="65" height="65"/><rect x="75" y="70" width="65" height="65" fill="var(--accent)" fill-opacity=".3"/>
+      <rect x="140" y="70" width="65" height="65"/><rect x="205" y="70" width="65" height="65"/><rect x="75" y="135" width="65" height="65"/>
+    </g>
+    <g font-family="JetBrains Mono,monospace" font-size="11" fill="var(--fg)" text-anchor="middle">
+      <text x="107" y="42">верх</text><text x="42" y="107">лево</text><text x="107" y="107">перед</text><text x="172" y="107">право</text><text x="237" y="107">зад</text><text x="107" y="172">низ</text>
+    </g>
+  </svg>
+</section>
+
+<section id="rig" class="stack">
+  <span class="eyebrow">Риггинг</span>
+  <h2>Скелет: как модель начинает гнуться</h2>
+  <p class="read">Двигать тысячи вершин руками для каждого кадра невозможно. Поэтому внутрь модели ставят <b>скелет</b> (в Blender — Armature) из <b>костей</b>. Каждая вершина «привязана» к одной или нескольким костям. Повернули кость — вершины поехали за ней.</p>
+
+  <div class="vp">
+    <div class="vp-head"><span>рука из двух костей: плечо → предплечье</span><span>линии внутри — кости</span></div>
+    <canvas id="cRig"></canvas>
+    <div class="ctrls">
+      <div class="row"><label class="lbl" for="bSh">Плечо</label><input id="bSh" type="range" min="-90" max="90" value="0"><span class="val" id="bShV">0°</span></div>
+      <div class="row"><label class="lbl" for="bEl">Локоть</label><input id="bEl" type="range" min="0" max="150" value="60"><span class="val" id="bElV">60°</span></div>
+      <div class="row" role="group" aria-label="Привязка">
+        <label class="lbl">Веса</label>
+        <button class="tog" id="tSmooth" aria-pressed="true">Плавные</button>
+        <button class="tog" id="tWeights" aria-pressed="false">Показать веса (Weight Paint)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="read stack">
+    <p>Выключите «Плавные» и согните локоть: каждая вершина слушается только одной кости, и сгиб превращается в излом. С плавными весами вершины возле сустава делят влияние между двумя костями, 50 на 50 в середине. «Показать веса» раскрашивает это влияние: серое слушается плеча, оранжевое — предплечья.</p>
+    <h3>Иерархия</h3>
+    <p>Кости соединены как «родитель — ребёнок»: таз → позвоночник → грудь → плечо → предплечье → кисть. Поворачиваете плечо — всё, что ниже по цепочке, едет следом. Именно поэтому в демо выше предплечье следует за плечом.</p>
+  </div>
+
+  <div class="cols">
+    <div class="stack">
+      <h3>Как сделать скелет в Blender</h3>
+      <ul class="check">
+        <li>Применить масштаб модели: <kbd>Ctrl</kbd>+<kbd>A</kbd> → All Transforms. Без этого привязка ломается.</li>
+        <li><kbd>Shift</kbd>+<kbd>A</kbd> → Armature: появится первая кость.</li>
+        <li><kbd>Tab</kbd> в режим редактирования скелета, выбрать кончик кости, <kbd>E</kbd> — вытянуть следующую. Так строится цепочка.</li>
+        <li>Ставить суставы точно в местах сгиба: локоть, колено, запястье. Удобно в режиме <kbd>Alt</kbd>+<kbd>Z</kbd>.</li>
+        <li>Называть кости с суффиксами <code>.L</code> и <code>.R</code> (<code>forearm.L</code>). Тогда Armature → Symmetrize достроит вторую сторону сама.</li>
+        <li>Выбрать модель, потом с <kbd>Shift</kbd> скелет, <kbd>Ctrl</kbd>+<kbd>P</kbd> → With Automatic Weights.</li>
+        <li>Проверить: скелет выбран, <kbd>Ctrl</kbd>+<kbd>Tab</kbd> — режим позы, вращать кости <kbd>R</kbd>.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Что ещё нужно знать</h3>
+      <p><b>Weight Paint.</b> Режим, где веса рисуют кистью прямо по модели: красное — кость влияет полностью, синее — не влияет. Автоматические веса почти всегда нужно подправить на подмышках, паху и плечах.</p>
+      <p><b>Петли у суставов.</b> Чтобы локоть гнулся красиво, вокруг него нужно 2–3 петли рёбер. Без них сгиб сплющивается, как фантик.</p>
+      <p><b>IK (обратная кинематика).</b> Ограничение Inverse Kinematics на кисти: тянете кисть, а плечо и локоть поворачиваются сами. Удобно для ног, чтобы ступни не скользили по полу.</p>
+      <p><b>Готовые решения.</b> Rigify (встроен в Blender) ставит полный человеческий скелет. Mixamo делает скелет автоматически по загруженной модели. Модели из VRoid уже приходят со скелетом.</p>
+      <p><b>Для игры</b> держите стандартный гуманоидный набор костей. Тогда движок (например, Humanoid в Unity) сможет переносить одну анимацию на разных персонажей.</p>
+    </div>
+  </div>
+</section>
+
+<section id="anim" class="stack">
+  <span class="eyebrow">Анимация</span>
+  <h2>Ключевые кадры и кривые</h2>
+  <p class="read">Анимация — это несколько <b>ключевых кадров</b> (keyframes): поз, которые вы ставите вручную. Все кадры между ними программа досчитывает сама. Способ досчёта называется <b>интерполяцией</b>, а график значения по времени — <b>кривой</b>. Ниже взмах руки из четырёх ключей.</p>
+
+  <div class="vp">
+    <div class="vp-head">
+      <span>кадр <b id="fNum" style="color:var(--fg)">0</b> / 60 · 24 кадра в секунду</span>
+      <div class="legend"><span><i style="background:var(--ax-z)"></i>плечо</span><span><i style="background:var(--accent)"></i>локоть</span></div>
+    </div>
+    <svg class="graph" id="graph" viewBox="0 0 600 150" preserveAspectRatio="none" aria-label="Кривые анимации плеча и локтя по кадрам"></svg>
+    <div class="ctrls">
+      <div class="row">
+        <button class="tog" id="bPlay" aria-pressed="false">▶ Играть</button>
+        <input id="frame" type="range" min="0" max="60" step="1" value="0" aria-label="Текущий кадр">
+      </div>
+      <div class="row seg">
+        <label class="lbl" for="interp">Интерп.</label>
+        <select id="interp">
+          <option value="bezier">Bézier (плавно)</option>
+          <option value="linear">Linear (равномерно)</option>
+          <option value="constant">Constant (рывками)</option>
+        </select>
+        <span class="muted" style="font-size:14px">Рука в демо «Скелет» выше двигается вместе с этим графиком.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="read stack">
+    <p>Сравните режимы. <b>Bézier</b> разгоняется и тормозит у каждого ключа, это выглядит живо. <b>Linear</b> едет с постоянной скоростью, как робот. <b>Constant</b> прыгает от позы к позе: так проверяют ключевые позы до того, как сглаживать движение.</p>
+  </div>
+
+  <div class="cols">
+    <div class="stack">
+      <h3>Порядок работы</h3>
+      <ul class="check">
+        <li>Выбрать скелет, <kbd>Ctrl</kbd>+<kbd>Tab</kbd> — режим позы. Внизу открыть Timeline или Dope Sheet.</li>
+        <li><b>Ключевые позы.</b> Кадр 1: выбрать кости, поставить позу, <kbd>I</kbd> — записать ключ. Перейти на кадр 20, новая поза, снова <kbd>I</kbd>.</li>
+        <li><b>Промежуточные позы</b> между ключами: где рука проходит середину пути, где сильнее всего согнута.</li>
+        <li><b>Graph Editor</b>: поправить кривые, чтобы движение разгонялось и тормозило где нужно. <kbd>T</kbd> меняет интерполяцию выбранных ключей.</li>
+        <li><b>Зацикливание</b> для ходьбы и бега: первый и последний кадр одинаковые (скопировать ключи <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>Ctrl</kbd>+<kbd>V</kbd>).</li>
+        <li><kbd>Пробел</kbd> — проиграть, <kbd>←</kbd> <kbd>→</kbd> — кадр назад и вперёд, <kbd>↑</kbd> <kbd>↓</kbd> — к соседнему ключу.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Что делает движение живым</h3>
+      <p><b>Замах (anticipation).</b> Перед ударом рука уходит назад. Без замаха удар выглядит слабым.</p>
+      <p><b>Разгон и торможение (ease in/out).</b> Ничто в жизни не стартует сразу на полной скорости. Кривые Bézier дают это бесплатно.</p>
+      <p><b>Дуги.</b> Руки, ноги и голова двигаются по дугам, а не по прямым линиям.</p>
+      <p><b>Захлёст (follow-through).</b> После остановки тела волосы, плащ и кисть ещё немного продолжают движение.</p>
+      <p class="muted">Это часть «12 принципов анимации» аниматоров Disney. Их стоит прочитать целиком.</p>
+    </div>
+  </div>
+
+  <div class="read stack">
+    <h3>Несколько анимаций в одной модели</h3>
+    <p>Каждая анимация в Blender — отдельное <b>действие</b> (Action): «Idle», «Walk», «Attack». Переключаются в Dope Sheet → Action Editor. Чтобы действие не удалилось при сохранении, нажмите щит (Fake User) рядом с его именем.</p>
+    <p>При экспорте в FBX включите Bake Animation. Каждое действие станет отдельным клипом в движке. Ходьбу для игр обычно делают «на месте»: персонажа двигает код, а анимация только перебирает ногами.</p>
+    <p><b>Где взять анимации без ручной работы:</b> Mixamo (бесплатная библиотека движений для гуманоидов), захват движения с видео нейросетями, покупные паки в магазинах ассетов.</p>
+  </div>
+
+  <div class="err">
+    <div><b>Модель рвётся при повороте кости</b><p class="muted">Часть вершин ни к одной кости не привязана и стоит на месте.</p><p class="fix">Weight Paint, докрасить эти места; или заново <kbd>Ctrl</kbd>+<kbd>P</kbd> → With Automatic Weights.</p></div>
+    <div><b>Локоть сплющивается</b><p class="muted">Мало петель рёбер в месте сгиба.</p><p class="fix">добавить 2–3 петли <kbd>Ctrl</kbd>+<kbd>R</kbd> вокруг сустава.</p></div>
+    <div><b>Анимация пропала после перезапуска</b><p class="muted">Действие ни к чему не привязано, и Blender удалил его при сохранении.</p><p class="fix">включить Fake User (иконка щита) у каждого действия.</p></div>
+    <div><b>Ноги скользят по полу</b><p class="muted">Ноги анимированы поворотами каждой кости, и ступня «плывёт».</p><p class="fix">IK на ноги и ключ на ступню, пока она стоит.</p></div>
+  </div>
+</section>
+
+<section id="studio" class="stack">
+  <span class="eyebrow">Мастерская</span>
+  <h2>Поставьте скелет своей модели</h2>
+  <p class="read">Загрузите модель, расставьте суставы, проверьте сгибы в режиме позы и скачайте файл со скелетом. Файл обрабатывается прямо в браузере и никуда не отправляется. Пока загружена фигура-пример.</p>
+
+  <div class="vp">
+    <div class="vp-head"><span id="stFile">пример</span><div class="stats"><span>вершин <b id="stV">0</b></span><span>костей <b id="stB">0</b></span></div></div>
+    <canvas id="cStudio"></canvas>
+    <div class="ctrls">
+      <div class="row">
+        <label class="lbl">Модель</label>
+        <label class="tog" for="stIn" id="stInLbl" tabindex="0">Загрузить файл…</label>
+        <input id="stIn" type="file" accept=".glb,.gltf,.fbx,.obj" hidden>
+        <button class="tog" id="stSample">Пример</button>
+        <span class="muted" style="font-size:14px">.glb, .gltf одним файлом, .fbx, .obj</span>
+      </div>
+      <div class="row seg" role="group" aria-label="Режим">
+        <label class="lbl">Режим</label>
+        <button id="mEdit" aria-pressed="true">Кости (расстановка)</button>
+        <button id="mPose" aria-pressed="false">Поза (проверка)</button>
+      </div>
+      <div class="row wiz" id="rowWiz" hidden>
+        <p id="wizText" aria-live="polite"></p>
+        <button class="tog" id="wBack">← Назад</button>
+        <button class="tog" id="wCancel">Отмена</button>
+      </div>
+      <div class="row" id="rowEdit">
+        <label class="lbl">Кости</label>
+        <button class="tog primary" id="bWiz">Расставить по шагам</button>
+        <button class="tog" id="tplH">Готовый шаблон</button>
+        <button class="tog" id="tMir" aria-pressed="true">Симметрия X</button>
+      </div>
+      <div class="row" id="rowAdv">
+        <label class="lbl">Ещё</label>
+        <button class="tog" id="bAdd">+ Кость от выбранной</button>
+        <button class="tog" id="bDel">Удалить выбранную</button>
+        <button class="tog" id="tplC">Цепочка (хвост, змея)</button>
+        <button class="tog" id="tRe" aria-pressed="false">Пересчитать веса из файла</button>
+      </div>
+      <div class="row" id="rowName">
+        <label class="lbl" for="stName">Имя</label>
+        <input id="stName" type="text" placeholder="кликните по суставу" disabled>
+      </div>
+      <div class="row" id="rowPose" hidden>
+        <label class="lbl">Проверка</label>
+        <button class="tog" id="tW" aria-pressed="false">Показать веса выбранной</button>
+        <button class="tog" id="bReset">Сбросить позу</button>
+      </div>
+      <div class="row">
+        <label class="lbl">Файл</label>
+        <button class="tog" id="bExport">Скачать .glb</button>
+        <span class="status" id="stStatus" aria-live="polite"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="stack">
+      <h3>Как пользоваться</h3>
+      <ul class="check">
+        <li>Загрузите модель. Она должна стоять прямо, лицом к вам, лучше в T- или A-позе (руки в стороны или чуть вниз).</li>
+        <li>Нажмите <b>«Расставить по шагам»</b>. Модель повернётся лицом к вам, а сайт по очереди попросит кликнуть в 10 мест: таз, грудь, шею, голову, затем левую руку и левую ногу. Правая сторона достроится зеркально. Ошиблись — «Назад».</li>
+        <li>Нажмите <b>«Поза (проверка)»</b>, кликните по любому суставу и крутите цветные кольца. Рука должна гнуться в локте, нога в колене.</li>
+        <li>Если что-то тянется не туда, вернитесь в «Кости», кликните по суставу и подвиньте его стрелками. С «Симметрией X» парный сустав двигается сам.</li>
+        <li>Нажмите <b>«Скачать»</b>. Внутри zip лежит <code>.glb</code> со скелетом. Распакуйте его.</li>
+        <li><b>Модель уже со скелетом</b> (например, из Mixamo или VRoid)? Кости из файла появятся сами. Чтобы дорисовать хвост, уши или плащ: кликните по суставу, от которого растёт новая часть, нажмите «+ Кость от выбранной» и подвиньте новую точку. Веса старых костей останутся как в файле, новые кости заберут только вершины рядом с собой.</li>
+        <li class="muted">Для не-человека (хвост, крылья, оружие) работает так же: «+ Кость от выбранной», затем подвинуть новую точку.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Что дальше с файлом</h3>
+      <p><b>Blender:</b> File → Import → glTF 2.0. Скелет появится как Armature, веса можно поправить в Weight Paint.</p>
+      <p><b>Unity:</b> .glb открывается пакетом glTFast. Другой путь: импортировать в Blender и экспортировать в FBX.</p>
+      <p class="muted"><b>Ограничения.</b> Веса считаются просто, по расстоянию до кости, и хуже, чем в Blender: у подмышек и между ног руки могут «прилипать» к телу. Скелет и веса из загруженного файла сохраняются, а анимации отбрасываются. Если кость из файла подвинуть, её старые веса останутся прежними. Тогда нажмите «Пересчитать веса из файла». Текстуры из отдельных файлов не подхватятся, для моделей с текстурами берите .glb.</p>
+    </div>
+  </div>
+</section>
+
+<section id="export" class="stack">
+  <span class="eyebrow">В игру</span>
+  <h2>Экспорт в движок</h2>
+  <div class="cols">
+    <div class="tbl"><table>
+      <thead><tr><th>Формат</th><th>Когда брать</th></tr></thead>
+      <tbody>
+        <tr><td><code>.fbx</code></td><td>Unity и Unreal. Хранит сетку, материалы, скелет и анимации.</td></tr>
+        <tr><td><code>.glb</code> / <code>.gltf</code></td><td>Открытый формат. Godot, веб, просмотрщики. Всё в одном файле.</td></tr>
+        <tr><td><code>.obj</code></td><td>Только статичная форма, без скелета. Для обмена между программами.</td></tr>
+        <tr><td><code>.blend</code></td><td>Исходник Blender. Храните его всегда, экспорт делайте из него.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="stack">
+      <h3>Проверка перед экспортом</h3>
+      <ul class="check">
+        <li>Применить масштаб и поворот: <kbd>Ctrl</kbd>+<kbd>A</kbd> → All Transforms. Иначе в движке объект окажется огромным или повёрнутым.</li>
+        <li>Размер в метрах: 1 единица Blender = 1 метр. Дверь около 2 м в высоту.</li>
+        <li>Оси разные: в Blender вверх смотрит Z, в Unity — Y. Экспортёр FBX это переводит, но проверьте, что модель не лежит на боку.</li>
+        <li>Точка опоры (origin) у ног персонажа или у основания предмета.</li>
+        <li>Нормали смотрят наружу: <kbd>Shift</kbd>+<kbd>N</kbd> в режиме редактирования.</li>
+        <li>Имена понятные: <code>Sword_Iron</code>, а не <code>Cube.017</code>.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="mistakes" class="stack">
+  <span class="eyebrow">Отладка</span>
+  <h2>Частые ошибки новичков</h2>
+  <div class="err">
+    <div><b>Грань чёрная или пропадает</b><p class="muted">Нормаль перевёрнута внутрь. Движки не рисуют обратную сторону грани.</p><p class="fix">выделить всё, <kbd>Shift</kbd>+<kbd>N</kbd>.</p></div>
+    <div><b>Двойные вершины</b><p class="muted">После дублирования вершины лежат друг на друге, сглаживание ломается швами.</p><p class="fix"><kbd>M</kbd> → By Distance.</p></div>
+    <div><b>Фаска кривая, модель растянута</b><p class="muted">Объект масштабировали в режиме объекта, и масштаб не применён.</p><p class="fix"><kbd>Ctrl</kbd>+<kbd>A</kbd> → Scale.</p></div>
+    <div><b>Странные складки при сглаживании</b><p class="muted">Нгоны и треугольники в местах, где модель гнётся.</p><p class="fix">разрезать на квады ножом <kbd>K</kbd> или петлями <kbd>Ctrl</kbd>+<kbd>R</kbd>.</p></div>
+    <div><b>Слишком тяжёлая модель</b><p class="muted">Subdivision применён на уровне 3–4, и у ящика 50 000 треугольников.</p><p class="fix">снизить уровень или модификатор Decimate. Для low-poly пропса хватает сотен треугольников.</p></div>
+    <div><b>Модель без толщины</b><p class="muted">Плоскость видна только с одной стороны и выглядит как бумага.</p><p class="fix">модификатор Solidify.</p></div>
+  </div>
+</section>
+
+<section class="stack read">
+  <span class="eyebrow">Дальше</span>
+  <h2>Первые упражнения</h2>
+  <p>Делайте по порядку: каждое добавляет один новый приём.</p>
+  <ul class="check">
+    <li><b>Стол.</b> Куб, <kbd>S</kbd> по Z для столешницы, выдавить четыре ножки <kbd>E</kbd>.</li>
+    <li><b>Кружка.</b> Цилиндр, <kbd>I</kbd> и <kbd>E</kbd> вниз для полости, ручка выдавливанием граней сбоку, Subdivision.</li>
+    <li><b>Меч.</b> Рисуете по референсу сбоку, Mirror по оси, фаски на лезвии.</li>
+    <li><b>Сундук.</b> Первая UV-развёртка и текстура дерева.</li>
+    <li><b>Простой персонаж.</b> Блокинг из кубов, Mirror, затем скелет через Armature.</li>
+  </ul>
+</section>
+
+<footer>Клавиши указаны для Blender 4.x и новее. Блок цифр (Num) — справа на полноразмерной клавиатуре; на ноутбуке включите Edit → Preferences → Input → Emulate Numpad.</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const col = n => new THREE.Color(css(n));
+
+function makeViewer(canvas, pos){
+  const r = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  r.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+  cam.position.set(...pos);
+  const ctl = new THREE.OrbitControls(cam, canvas);
+  ctl.enableDamping = true; ctl.target.set(0, 0.2, 0);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x556070, 0.85));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.75); dl.position.set(3, 5, 4); scene.add(dl);
+  const v = {scene, cam, ctl, canvas, grid:null, axes:null, gridY:-0.8, gridScale:1};
+  v.refreshGrid = () => {
+    if (v.grid) scene.remove(v.grid, v.axes);
+    v.grid = new THREE.GridHelper(6, 12, col('--grid'), col('--grid')); v.grid.position.y = v.gridY; v.grid.scale.setScalar(v.gridScale);
+    const g = new THREE.BufferGeometry().setFromPoints([0,0,0, 1.2,0,0, 0,0,0, 0,1.2,0, 0,0,0, 0,0,-1.2].reduce((a,_,i,s)=>i%3?a:a.concat(new THREE.Vector3(s[i],s[i+1],s[i+2])),[]));
+    const c = [col('--ax-x'),col('--ax-x'),col('--ax-z'),col('--ax-z'),col('--ax-y'),col('--ax-y')]; // three.js is Y-up; drawn as Blender-style Z-up
+    g.setAttribute('color', new THREE.Float32BufferAttribute(c.flatMap(x=>[x.r,x.g,x.b]), 3));
+    v.axes = new THREE.LineSegments(g, new THREE.LineBasicMaterial({vertexColors:true})); v.axes.scale.setScalar(v.gridScale); v.axes.position.set(-2.6*v.gridScale, v.gridY, 2.6*v.gridScale);
+    scene.add(v.grid, v.axes);
+  };
+  v.refreshGrid();
+  const fit = () => { const w = canvas.clientWidth, h = canvas.clientHeight; r.setSize(w, h, false); cam.aspect = w/h; cam.updateProjectionMatrix(); };
+  new ResizeObserver(fit).observe(canvas);
+  r.setAnimationLoop(t => { v.tick && v.tick(t); ctl.update(); r.render(scene, cam); });
+  return v;
+}
+
+const uniqueVerts = g => { const p = g.attributes.position, s = new Set(); for (let i=0;i<p.count;i++) s.add(p.getX(i).toFixed(4)+','+p.getY(i).toFixed(4)+','+p.getZ(i).toFixed(4)); return s.size; };
+const tris = g => (g.index ? g.index.count : g.attributes.position.count) / 3;
+
+function checker(){
+  const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+  for (let i=0;i<8;i++) for (let j=0;j<8;j++){ x.fillStyle = (i+j)%2 ? '#2b3443' : '#f0f2f5'; x.fillRect(i*32,j*32,32,32); }
+  x.fillStyle = '#e2741b'; x.fillRect(0,0,32,32);
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; return t;
+}
+const checkTex = checker();
+
+/* main viewer */
+const M = makeViewer(document.getElementById('cMain'), [2.6, 2.0, 3.2]);
+const st = {shape:'cube', faces:true, wire:true, verts:false, flat:true, check:false};
+let objs = [];
+const detail = document.getElementById('detail');
+
+function geom(){
+  const d = +detail.value;
+  switch (st.shape){
+    case 'cube':   return new THREE.BoxGeometry(1.4,1.4,1.4,d,d,d);
+    case 'sphere': return new THREE.SphereGeometry(0.95, 4+d*4, 2+d*2);
+    case 'ico':    return new THREE.IcosahedronGeometry(0.95, d-1);
+    case 'cyl':    return new THREE.CylinderGeometry(0.7,0.7,1.5, 3+d*3, d);
+    case 'torus':  return new THREE.TorusGeometry(0.7,0.28, 3+d*2, 6+d*6);
+  }
+}
+function build(){
+  objs.forEach(o => { M.scene.remove(o); o.geometry.dispose(); }); objs = [];
+  const g = geom();
+  const mat = new THREE.MeshStandardMaterial({color: st.check ? 0xffffff : col('--mesh'), map: st.check ? checkTex : null,
+    flatShading: st.flat, roughness: 0.7, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1});
+  const mesh = new THREE.Mesh(g, mat); mesh.visible = st.faces;
+  const wire = new THREE.LineSegments(new THREE.WireframeGeometry(g), new THREE.LineBasicMaterial({color: col('--wire'), transparent:true, opacity:0.75})); wire.visible = st.wire;
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({color: col('--accent'), size: 7, sizeAttenuation: false})); pts.visible = st.verts;
+  objs = [mesh, wire, pts]; objs.forEach(o => { o.position.y = 0.2; M.scene.add(o); });
+  document.getElementById('sV').textContent = uniqueVerts(g).toLocaleString('ru');
+  document.getElementById('sT').textContent = tris(g).toLocaleString('ru');
+  document.getElementById('detailV').textContent = detail.value;
+}
+document.getElementById('shapes').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  st.shape = b.dataset.s;
+  document.querySelectorAll('#shapes button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  build();
+});
+detail.addEventListener('input', build);
+[['tFaces','faces'],['tWire','wire'],['tVerts','verts'],['tFlat','flat'],['tCheck','check']].forEach(([id,k]) => {
+  const b = document.getElementById(id);
+  b.addEventListener('click', () => { st[k] = !st[k]; b.setAttribute('aria-pressed', st[k]); build(); });
+});
+
+/* extrude viewer */
+const E = makeViewer(document.getElementById('cExt'), [2.8, 2.4, 3.0]);
+let eObjs = [];
+const inset = document.getElementById('inset'), extr = document.getElementById('extr');
+function part(w, h, y, color){
+  const g = new THREE.BoxGeometry(w, h, w);
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({color, flatShading:true, polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1}));
+  const l = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({color: col('--wire')}));
+  [m,l].forEach(o => { o.position.y = y; E.scene.add(o); eObjs.push(o); });
+  return 12;
+}
+function buildExt(){
+  eObjs.forEach(o => { E.scene.remove(o); o.geometry.dispose(); }); eObjs = [];
+  const w = 1.6 - 2*(+inset.value), h = +extr.value;
+  part(1.6, 0.6, -0.5, col('--mesh'));
+  // Blender count: cube 10 (without top) + inset ring 8 + new top 2, extrude adds 4 wall quads = 8
+  const t = h > 0.001 ? 28 : 20;
+  if (h > 0.001) part(w, h, -0.2 + h/2, col('--accent'));
+  else {
+    const g = new THREE.PlaneGeometry(w, w); g.rotateX(-Math.PI/2);
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({color: col('--accent'), side: THREE.DoubleSide})); m.position.y = -0.195;
+    E.scene.add(m); eObjs.push(m);
+  }
+  document.getElementById('sT2').textContent = t;
+  document.getElementById('insetV').textContent = (+inset.value).toFixed(2);
+  document.getElementById('extrV').textContent = h.toFixed(2);
+}
+inset.addEventListener('input', buildExt); extr.addEventListener('input', buildExt);
+
+/* rig + animation */
+const R = makeViewer(document.getElementById('cRig'), [3.4, 2.0, 4.4]);
+const rs = {smooth:true, weights:false, interp:'bezier', frame:0, play:false};
+const H = 2.4, bSh = document.getElementById('bSh'), bEl = document.getElementById('bEl');
+let rig = null, rigHelper = null;
+function buildRig(){
+  if (rig){ R.scene.remove(rig, rigHelper); rig.geometry.dispose(); }
+  const g = new THREE.CylinderGeometry(0.22, 0.22, H, 14, 32); g.translate(0, H/2, 0);
+  const p = g.attributes.position, si = [], sw = [], cl = [], b = rs.smooth ? 0.3 : 0.001;
+  const c0 = col('--mesh'), c1 = col('--accent');
+  for (let i=0;i<p.count;i++){
+    const t = Math.min(1, Math.max(0, (p.getY(i) - H/2 + b) / (2*b))); // weight of forearm bone near the elbow
+    si.push(0,1,0,0); sw.push(1-t,t,0,0);
+    const c = c0.clone().lerp(c1, t); cl.push(c.r,c.g,c.b);
+  }
+  g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
+  g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cl, 3));
+  const mat = new THREE.MeshStandardMaterial({color: rs.weights ? 0xffffff : col('--mesh'), vertexColors: rs.weights, skinning: true, roughness: 0.7});
+  const b0 = new THREE.Bone(), b1 = new THREE.Bone(), b2 = new THREE.Bone();
+  b1.position.y = H/2; b2.position.y = H/2; b0.add(b1); b1.add(b2);
+  rig = new THREE.SkinnedMesh(g, mat); rig.add(b0); rig.bind(new THREE.Skeleton([b0,b1,b2])); rig.position.y = -0.8;
+  rigHelper = new THREE.SkeletonHelper(rig); rigHelper.material.depthTest = false; rigHelper.renderOrder = 1;
+  R.scene.add(rig, rigHelper);
+  pose();
+}
+function pose(){
+  const [b0, b1] = rig.skeleton.bones;
+  b0.rotation.z = THREE.MathUtils.degToRad(+bSh.value);
+  b1.rotation.z = THREE.MathUtils.degToRad(+bEl.value);
+  document.getElementById('bShV').textContent = bSh.value + '°';
+  document.getElementById('bElV').textContent = bEl.value + '°';
+}
+const stopPlay = () => { rs.play = false; bPlay.setAttribute('aria-pressed', false); bPlay.textContent = '▶ Играть'; };
+bSh.addEventListener('input', () => { stopPlay(); pose(); });
+bEl.addEventListener('input', () => { stopPlay(); pose(); });
+[['tSmooth','smooth'],['tWeights','weights']].forEach(([id,k]) => {
+  const b = document.getElementById(id);
+  b.addEventListener('click', () => { rs[k] = !rs[k]; b.setAttribute('aria-pressed', rs[k]); buildRig(); });
+});
+
+const keys = [[0,0,20],[20,-45,130],[40,25,30],[60,0,20]]; // [frame, shoulder°, elbow°]
+const ease = t => rs.interp === 'linear' ? t : rs.interp === 'constant' ? 0 : t*t*(3-2*t);
+function sample(f){
+  for (let i=0;i<keys.length-1;i++){ const a = keys[i], b = keys[i+1];
+    if (f < b[0]){ const t = ease((f-a[0])/(b[0]-a[0])); return [a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; } }
+  return keys[keys.length-1].slice(1);
+}
+const gx = f => 30 + f*9, gy = v => 130 - (v+60)*0.55; // 60 frames → 540px, values −60..140° → 110px
+const graph = document.getElementById('graph'), frame = document.getElementById('frame'), bPlay = document.getElementById('bPlay');
+function drawGraph(){
+  let grid = '', curves = '';
+  for (let f=0; f<=60; f+=10) grid += `<line x1="${gx(f)}" y1="10" x2="${gx(f)}" y2="135" stroke="var(--line)"/><text x="${gx(f)}" y="147" font-size="9" text-anchor="middle" fill="var(--muted)" font-family="JetBrains Mono,monospace">${f}</text>`;
+  [[0,'var(--ax-z)'],[1,'var(--accent)']].forEach(([k,c]) => {
+    let d = ''; for (let f=0; f<=60; f+=0.5){ const v = sample(f)[k]; d += (d?'L':'M') + gx(f) + ' ' + gy(v); }
+    curves += `<path d="${d}" fill="none" stroke="${c}" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+    keys.forEach(kf => curves += `<rect x="${gx(kf[0])-4}" y="${gy(kf[k+1])-4}" width="8" height="8" transform="rotate(45 ${gx(kf[0])} ${gy(kf[k+1])})" fill="${c}" stroke="var(--panel)"/>`);
+  });
+  graph.innerHTML = grid + curves + `<line id="ph" y1="8" y2="137" stroke="var(--fg)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`;
+  applyFrame();
+}
+function applyFrame(){
+  const [s, e] = sample(rs.frame);
+  bSh.value = Math.round(s); bEl.value = Math.round(e); pose();
+  const ph = document.getElementById('ph'); ph.setAttribute('x1', gx(rs.frame)); ph.setAttribute('x2', gx(rs.frame));
+  frame.value = Math.floor(rs.frame); document.getElementById('fNum').textContent = Math.floor(rs.frame);
+}
+let last = 0;
+R.tick = t => { if (rs.play) { rs.frame = (rs.frame + Math.min(0.1, (t-last)/1000) * 24) % 60; applyFrame(); } last = t; };
+bPlay.addEventListener('click', () => { if (rs.play) return stopPlay(); rs.play = true; bPlay.setAttribute('aria-pressed', true); bPlay.textContent = '❚❚ Пауза'; });
+frame.addEventListener('input', () => { stopPlay(); rs.frame = +frame.value; applyFrame(); });
+document.getElementById('interp').addEventListener('change', e => { rs.interp = e.target.value; drawGraph(); });
+
+/* studio: upload → place joints → auto weights → pose test → export glb */
+const V3 = THREE.Vector3;
+const SV = makeViewer(document.getElementById('cStudio'), [2.4, 1.6, 3.6]);
+const S = {meshes:[], joints:[], sel:-1, mode:'edit', mirror:true, showW:false, name:'example', h:1.8, cx:0, plain:null, rigged:null, markers:null, lines:null};
+const $ = id => document.getElementById(id);
+const stStatus = t => $('stStatus').textContent = t;
+const tc = new THREE.TransformControls(SV.cam, SV.canvas);
+tc.setSize(0.75);
+tc.addEventListener('dragging-changed', e => SV.ctl.enabled = !e.value);
+let tcBusy = false; tc.addEventListener('mouseDown', () => tcBusy = true);
+SV.scene.add(tc);
+const sphereGeo = new THREE.SphereGeometry(1, 12, 8);
+
+function ingest(root, name){
+  if (S.wiz) wizEnd();
+  root.updateMatrixWorld(true);
+  // existing skeleton: every bone becomes a joint, its original weights are kept (see computeWeights)
+  const boneList = [];
+  root.traverse(o => { if (o.isSkinnedMesh) o.skeleton.bones.forEach(b => { if (!boneList.includes(b)) boneList.push(b); }); });
+  const fileJoints = boneList.map(b => ({name: b.name || 'Bone', parent: -1, pos: b.getWorldPosition(new V3()), orig: true}));
+  boneList.forEach((b, i) => fileJoints[i].parent = boneList.indexOf(b.parent));
+  const comp = (a, i, k) => k === 0 ? a.getX(i) : k === 1 ? a.getY(i) : k === 2 ? a.getZ(i) : a.getW(i);
+  const meshes = [];
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    const g = o.geometry.clone(); g.morphAttributes = {};
+    let orig = null;
+    if (o.isSkinnedMesh && g.attributes.skinIndex && g.attributes.skinWeight){
+      const si = g.attributes.skinIndex, sw = g.attributes.skinWeight, n = si.count;
+      orig = {J: new Array(n*4), W: new Float32Array(n*4)};
+      for (let i=0;i<n;i++) for (let k=0;k<4;k++){
+        orig.W[i*4+k] = comp(sw, i, k);
+        orig.J[i*4+k] = fileJoints[boneList.indexOf(o.skeleton.bones[comp(si, i, k)])];
+      }
+    }
+    g.deleteAttribute('skinIndex'); g.deleteAttribute('skinWeight'); g.deleteAttribute('color');
+    g.applyMatrix4(o.matrixWorld);
+    if (!g.attributes.normal) g.computeVertexNormals();
+    meshes.push({g, mat: o.material, orig});
+  });
+  if (!meshes.length) throw new Error('в файле нет мешей');
+  S.meshes = meshes; S.name = name.replace(/\.[^.]+$/, '') || 'model'; S.sel = -1;
+  const bb = new THREE.Box3(); meshes.forEach(m => { m.g.computeBoundingBox(); bb.union(m.g.boundingBox); });
+  const size = bb.getSize(new V3()), c = bb.getCenter(new V3());
+  S.bb = bb; S.h = size.y || 1; S.cx = c.x;
+  SV.gridY = bb.min.y; SV.gridScale = S.h / 1.8; SV.refreshGrid();
+  SV.cam.near = S.h / 200; SV.cam.far = S.h * 200; SV.cam.updateProjectionMatrix();
+  SV.cam.position.copy(c).add(new V3(S.h*0.8, S.h*0.25, S.h*1.7)); SV.ctl.target.copy(c);
+  $('stFile').textContent = name;
+  $('stV').textContent = meshes.reduce((a, m) => a + m.g.attributes.position.count, 0).toLocaleString('ru');
+  if (fileJoints.length){
+    S.joints = fileJoints; S.sel = -1;
+    stStatus('В файле найден скелет: ' + fileJoints.length + ' костей. Кликните по суставу и «+ Кость», чтобы дорисовать новые.');
+  } else { tplHumanoid(); stStatus('Скелета в файле нет. Нажмите «Расставить по шагам».'); }
+  setMode('edit');
+}
+
+function tplHumanoid(){
+  const {min, max} = S.bb, h = S.h, w = max.x - min.x, cz = (min.z + max.z) / 2, J = [];
+  const add = (name, parent, x, y, z = 0) => J.push({name, parent: parent ? J.findIndex(j => j.name === parent) : -1, pos: new V3(S.cx + x, min.y + y*h, cz + z)});
+  add('Hips', null, 0, .53); add('Spine', 'Hips', 0, .62); add('Chest', 'Spine', 0, .72); add('Neck', 'Chest', 0, .84); add('Head', 'Neck', 0, .90);
+  const tpose = w > 0.6*h, reach = w/2*0.85;
+  [['L',1],['R',-1]].forEach(([n,s]) => {
+    add('Shoulder.'+n, 'Chest', s*.07*h, .80);
+    add('UpperArm.'+n, 'Shoulder.'+n, s*.17*h, .80);
+    if (tpose){ add('LowerArm.'+n, 'UpperArm.'+n, s*(.17*h + reach)/2, .80); add('Hand.'+n, 'LowerArm.'+n, s*reach, .80); }
+    else { add('LowerArm.'+n, 'UpperArm.'+n, s*.21*h, .64); add('Hand.'+n, 'LowerArm.'+n, s*.24*h, .50); }
+    add('UpperLeg.'+n, 'Hips', s*.09*h, .50); add('LowerLeg.'+n, 'UpperLeg.'+n, s*.09*h, .28);
+    add('Foot.'+n, 'LowerLeg.'+n, s*.09*h, .05); add('Toes.'+n, 'Foot.'+n, s*.09*h, .01, .07*h);
+  });
+  S.joints = J; S.sel = -1;
+}
+function tplChain(){
+  const {min} = S.bb, n = 4; S.joints = [];
+  for (let i=0;i<n;i++) S.joints.push({name:'Bone.'+String(i).padStart(3,'0'), parent:i-1, pos:new V3(S.cx, min.y + S.h*i/(n-1)*0.95, (S.bb.min.z+S.bb.max.z)/2)});
+  S.sel = -1;
+}
+
+// shortcut: weights by inverse distance to bone segments (no heat diffusion like Blender), limbs near the torso can bleed; fix in Weight Paint
+function computeWeights(g, orig){
+  const segs = S.joints.map((j, i) => {
+    const kids = S.joints.filter(k => k.parent === i);
+    let tail;
+    if (kids.length){ tail = new V3(); kids.forEach(k => tail.add(k.pos)); tail.divideScalar(kids.length); }
+    else if (j.parent >= 0) tail = j.pos.clone().sub(S.joints[j.parent].pos).multiplyScalar(0.5).add(j.pos);
+    else tail = j.pos.clone();
+    return new THREE.Line3(j.pos.clone(), tail);
+  });
+  const p = g.attributes.position, n = p.count, si = new Uint16Array(n*4), sw = new Float32Array(n*4);
+  const v = new V3(), c = new V3(), eps = S.h * 0.01;
+  for (let i=0;i<n;i++){
+    v.fromBufferAttribute(p, i);
+    const W = [0,0,0,0], I = [0,0,0,0];
+    segs.forEach((s, b) => {
+      s.closestPointToPoint(v, true, c);
+      const w = 1 / Math.pow(c.distanceTo(v) + eps, 4);
+      for (let k=0;k<4;k++) if (w > W[k]){ W.splice(k, 0, w); I.splice(k, 0, b); W.length = I.length = 4; break; }
+    });
+    // vertex still closest to a bone from the file → keep the file's weights; near a new bone → auto weights
+    if (orig && !S.reweight && S.joints[I[0]].orig){
+      const ids = [0,1,2,3].map(k => orig.W[i*4+k] > 0 ? S.joints.indexOf(orig.J[i*4+k]) : 0);
+      if (ids.every(id => id >= 0)){ for (let k=0;k<4;k++){ si[i*4+k] = ids[k]; sw[i*4+k] = orig.W[i*4+k]; } continue; }
+    }
+    const sum = W[0]+W[1]+W[2]+W[3] || 1;
+    for (let k=0;k<4;k++){ si[i*4+k] = I[k]; sw[i*4+k] = W[k] / sum; }
+  }
+  g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
+  g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+}
+
+function buildSkinned(){
+  const bones = S.joints.map(j => { const b = new THREE.Bone(); b.name = j.name; return b; });
+  const group = new THREE.Group(); group.name = S.name;
+  S.joints.forEach((j, i) => {
+    if (j.parent < 0){ group.add(bones[i]); bones[i].position.copy(j.pos); }
+    else { bones[j.parent].add(bones[i]); bones[i].position.copy(j.pos).sub(S.joints[j.parent].pos); }
+  });
+  group.updateMatrixWorld(true);
+  const skel = new THREE.Skeleton(bones);
+  S.meshes.forEach(m => {
+    computeWeights(m.g, m.orig);
+    const mats = [].concat(m.mat).map(x => { const c = x.clone(); c.skinning = true; return c; });
+    const sm = new THREE.SkinnedMesh(m.g, Array.isArray(m.mat) ? mats : mats[0]);
+    sm.userData.mats = sm.material; group.add(sm); sm.bind(skel);
+  });
+  return {group, bones};
+}
+
+const wMat = new THREE.MeshBasicMaterial({vertexColors:true, skinning:true});
+function paintWeights(){
+  if (!S.rigged) return;
+  const c0 = col('--mesh'), c1 = col('--accent'), c = new THREE.Color();
+  S.rigged.group.children.filter(o => o.isSkinnedMesh).forEach(sm => {
+    if (!S.showW || S.sel < 0){ sm.material = sm.userData.mats; return; }
+    const g = sm.geometry, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, n = si.count, arr = new Float32Array(n*3);
+    for (let i=0;i<n;i++){
+      const w = (si.getX(i)===S.sel?sw.getX(i):0) + (si.getY(i)===S.sel?sw.getY(i):0) + (si.getZ(i)===S.sel?sw.getZ(i):0) + (si.getW(i)===S.sel?sw.getW(i):0);
+      c.copy(c0).lerp(c1, w); arr.set([c.r, c.g, c.b], i*3);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(arr, 3));
+    sm.material = wMat;
+  });
+}
+
+const jointWorld = i => S.mode === 'pose' && S.rigged ? S.rigged.bones[i].getWorldPosition(new V3()) : S.joints[i].pos;
+function drawOverlay(){
+  if (S.markers) SV.scene.remove(S.markers, S.lines);
+  S.markers = new THREE.Group();
+  S.joints.forEach((j, i) => {
+    const m = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({color: col('--wire'), depthTest:false, transparent:true}));
+    m.scale.setScalar(S.h * 0.016); m.renderOrder = 3; m.userData.i = i; m.position.copy(j.pos); S.markers.add(m);
+  });
+  const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(Math.max(1, S.joints.length)*6), 3));
+  S.lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({color: col('--accent'), depthTest:false, transparent:true}));
+  S.lines.renderOrder = 2; S.lines.frustumCulled = false;
+  SV.scene.add(S.markers, S.lines);
+  $('stB').textContent = S.joints.length;
+  syncOverlay();
+}
+function syncOverlay(){
+  if (!S.lines) return;
+  const a = S.lines.geometry.attributes.position;
+  S.joints.forEach((j, i) => {
+    const p = jointWorld(i); if (S.mode === 'pose') S.markers.children[i].position.copy(p);
+    const q = j.parent >= 0 ? jointWorld(j.parent) : p;
+    a.setXYZ(i*2, q.x, q.y, q.z); a.setXYZ(i*2+1, p.x, p.y, p.z);
+  });
+  a.needsUpdate = true;
+}
+SV.tick = () => { if (S.mode === 'pose') syncOverlay(); };
+
+function select(i){
+  S.sel = i;
+  S.markers.children.forEach((m, k) => m.material.color.copy(col(k === i ? '--accent' : '--wire')));
+  tc.detach();
+  if (i >= 0) tc.attach(S.mode === 'edit' ? S.markers.children[i] : S.rigged.bones[i]);
+  $('stName').value = i >= 0 ? S.joints[i].name : ''; $('stName').disabled = i < 0 || S.mode !== 'edit';
+  paintWeights();
+}
+
+/* beginner wizard: click 10 spots on the model, the right side is mirrored */
+const WIZ = [
+  ['Hips', 'таз: центр тела чуть ниже пупка'],
+  ['Chest', 'грудь: середину груди'],
+  ['Neck', 'шею: где она переходит в плечи'],
+  ['Head', 'голову: место под подбородком'],
+  ['UpperArm.L', 'левое плечо, где рука крепится к телу'],
+  ['LowerArm.L', 'левый локоть'],
+  ['Hand.L', 'левое запястье'],
+  ['UpperLeg.L', 'левое бедро, верх ноги'],
+  ['LowerLeg.L', 'левое колено'],
+  ['Foot.L', 'левую лодыжку'],
+];
+function wizStart(){
+  if (S.mode !== 'edit') setMode('edit');
+  S.wiz = {step: 0, pts: {}, prev: S.joints};
+  const c = S.bb.getCenter(new V3());
+  SV.ctl.target.copy(c); SV.cam.position.set(c.x, c.y, c.z + S.h * 2.2); // front view, like Numpad 1
+  wizShow();
+}
+function wizShow(){
+  const [name, text] = WIZ[S.wiz.step];
+  $('wizText').textContent = `Шаг ${S.wiz.step + 1} из ${WIZ.length}: кликните по модели в точку — ${text}.` + (name.endsWith('.L') ? ' Левое у персонажа — справа на экране.' : '');
+  $('rowWiz').hidden = false; $('rowEdit').hidden = $('rowAdv').hidden = $('rowName').hidden = true;
+  S.joints = Object.entries(S.wiz.pts).map(([n, p]) => ({name: n, parent: -1, pos: p}));
+  S.sel = -1; drawOverlay(); select(-1);
+}
+function wizEnd(){ S.wiz = null; $('rowWiz').hidden = true; $('rowEdit').hidden = $('rowAdv').hidden = $('rowName').hidden = false; }
+function wizCancel(){ if (!S.wiz) return; S.joints = S.wiz.prev; wizEnd(); drawOverlay(); select(-1); }
+function pickInside(rc){
+  const objs = S.plain ? S.plain.children : [];
+  const h1 = rc.intersectObjects(objs)[0]; if (!h1) return null;
+  const dir = rc.ray.direction.clone();
+  const back = new THREE.Raycaster(h1.point.clone().addScaledVector(dir, S.h * 3), dir.negate());
+  const h2 = back.intersectObjects(objs)[0]; // the far side of the body, so the joint sits inside, not on the skin
+  return h2 ? h1.point.clone().add(h2.point).multiplyScalar(0.5) : h1.point.clone();
+}
+function wizClick(rc){
+  const p = pickInside(rc);
+  if (!p) return stStatus('Мимо. Кликните прямо по модели.');
+  stStatus('');
+  S.wiz.pts[WIZ[S.wiz.step][0]] = p; S.wiz.step++;
+  if (S.wiz.step < WIZ.length) return wizShow();
+  const P = S.wiz.pts, hx = P.Hips.x, J = [];
+  const add = (name, parent, pos) => J.push({name, parent: parent ? J.findIndex(j => j.name === parent) : -1, pos});
+  add('Hips', null, P.Hips); add('Spine', 'Hips', P.Hips.clone().lerp(P.Chest, 0.5)); add('Chest', 'Spine', P.Chest);
+  add('Neck', 'Chest', P.Neck); add('Head', 'Neck', P.Head);
+  ['L', 'R'].forEach(s => {
+    const f = v => s === 'L' ? v.clone() : new V3(2*hx - v.x, v.y, v.z);
+    const ua = f(P['UpperArm.L']), foot = f(P['Foot.L']);
+    add('Shoulder.'+s, 'Chest', new V3(P.Neck.x + (ua.x - P.Neck.x)*0.4, ua.y, ua.z));
+    add('UpperArm.'+s, 'Shoulder.'+s, ua); add('LowerArm.'+s, 'UpperArm.'+s, f(P['LowerArm.L'])); add('Hand.'+s, 'LowerArm.'+s, f(P['Hand.L']));
+    add('UpperLeg.'+s, 'Hips', f(P['UpperLeg.L'])); add('LowerLeg.'+s, 'UpperLeg.'+s, f(P['LowerLeg.L']));
+    add('Foot.'+s, 'LowerLeg.'+s, foot); add('Toes.'+s, 'Foot.'+s, new V3(foot.x, S.bb.min.y + S.h*0.01, foot.z + S.h*0.07));
+  });
+  S.joints = J; wizEnd(); S.sel = -1; drawOverlay(); select(-1);
+  stStatus('Скелет готов: ' + J.length + ' костей. Нажмите «Поза (проверка)» и покрутите суставы.');
+}
+
+function setMode(m){
+  if (S.wiz) wizCancel();
+  if (m === 'pose' && !S.joints.length){ stStatus('Нет костей. Нажмите шаблон или «+ Кость».'); m = 'edit'; }
+  tc.detach();
+  [S.plain, S.rigged && S.rigged.group].forEach(o => o && SV.scene.remove(o));
+  S.plain = S.rigged = null; S.mode = m;
+  if (m === 'edit'){
+    S.plain = new THREE.Group(); S.meshes.forEach(x => S.plain.add(new THREE.Mesh(x.g, x.mat))); SV.scene.add(S.plain);
+    tc.setMode('translate'); tc.setSpace('world');
+  } else {
+    stStatus('Считаю веса…');
+    S.rigged = buildSkinned(); SV.scene.add(S.rigged.group);
+    tc.setMode('rotate'); tc.setSpace('local'); stStatus('');
+  }
+  $('mEdit').setAttribute('aria-pressed', m === 'edit'); $('mPose').setAttribute('aria-pressed', m === 'pose');
+  $('rowEdit').hidden = m !== 'edit'; $('rowPose').hidden = m !== 'pose';
+  drawOverlay(); select(S.sel < S.joints.length ? S.sel : -1);
+}
+
+const mirrorOf = i => {
+  const n = S.joints[i].name, o = /\.L$/.test(n) ? n.replace(/\.L$/, '.R') : /\.R$/.test(n) ? n.replace(/\.R$/, '.L') : null;
+  return o ? S.joints.findIndex(j => j.name === o) : -1;
+};
+tc.addEventListener('objectChange', () => {
+  if (S.mode !== 'edit' || S.sel < 0) return;
+  const p = S.markers.children[S.sel].position; S.joints[S.sel].pos.copy(p);
+  const k = S.mirror ? mirrorOf(S.sel) : -1;
+  if (k >= 0){ S.joints[k].pos.set(2*S.cx - p.x, p.y, p.z); S.markers.children[k].position.copy(S.joints[k].pos); }
+  syncOverlay();
+});
+
+let down = null;
+SV.canvas.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
+SV.canvas.addEventListener('pointerup', e => {
+  const busy = tcBusy; tcBusy = false;
+  if (busy || !down || Math.hypot(e.clientX-down[0], e.clientY-down[1]) > 5) return;
+  const r = SV.canvas.getBoundingClientRect(), rc = new THREE.Raycaster();
+  rc.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1, -(e.clientY-r.top)/r.height*2+1), SV.cam);
+  if (S.wiz) return wizClick(rc);
+  const hit = rc.intersectObjects(S.markers.children)[0];
+  select(hit ? hit.object.userData.i : -1);
+});
+
+$('mEdit').addEventListener('click', () => setMode('edit'));
+$('mPose').addEventListener('click', () => setMode('pose'));
+$('tRe').addEventListener('click', e => { S.reweight = !S.reweight; e.target.setAttribute('aria-pressed', S.reweight); if (S.mode === 'pose') setMode('pose'); });
+$('bWiz').addEventListener('click', wizStart);
+$('wCancel').addEventListener('click', () => { wizCancel(); stStatus(''); });
+$('wBack').addEventListener('click', () => { if (!S.wiz || !S.wiz.step) return; S.wiz.step--; delete S.wiz.pts[WIZ[S.wiz.step][0]]; wizShow(); });
+$('tplH').addEventListener('click', () => { tplHumanoid(); setMode('edit'); });
+$('tplC').addEventListener('click', () => { tplChain(); setMode('edit'); });
+$('tMir').addEventListener('click', e => { S.mirror = !S.mirror; e.target.setAttribute('aria-pressed', S.mirror); });
+$('bAdd').addEventListener('click', () => {
+  if (S.sel < 0 && S.joints.length) return stStatus('Сначала кликните по суставу, от которого растить новую кость.');
+  let pos;
+  if (S.sel < 0) pos = S.bb.getCenter(new V3());
+  else {
+    const j = S.joints[S.sel], from = j.parent >= 0 ? S.joints[j.parent].pos : j.pos.clone().sub(new V3(0, S.h*0.1, 0));
+    const dir = j.pos.clone().sub(from); if (dir.length() < 1e-6) dir.set(0, S.h*0.1, 0);
+    pos = j.pos.clone().add(dir.multiplyScalar(0.5));
+  }
+  S.joints.push({name: 'Bone.' + String(S.joints.length).padStart(3, '0'), parent: S.sel, pos});
+  drawOverlay(); select(S.joints.length - 1); stStatus('');
+});
+$('bDel').addEventListener('click', () => {
+  const i = S.sel; if (i < 0) return stStatus('Кликните по суставу, который нужно удалить.');
+  const par = S.joints[i].parent;
+  S.joints.forEach(j => { if (j.parent === i) j.parent = par; });
+  S.joints.splice(i, 1);
+  S.joints.forEach(j => { if (j.parent > i) j.parent--; });
+  drawOverlay(); select(-1);
+});
+$('stName').addEventListener('change', e => { const v = e.target.value.trim(); if (S.sel >= 0 && v) S.joints[S.sel].name = v; });
+$('tW').addEventListener('click', e => { S.showW = !S.showW; e.target.setAttribute('aria-pressed', S.showW); if (S.showW && S.sel < 0) stStatus('Кликните по суставу, чтобы увидеть его веса.'); paintWeights(); });
+$('bReset').addEventListener('click', () => S.rigged && S.rigged.bones.forEach(b => b.quaternion.identity()));
+$('stInLbl').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('stIn').click(); } });
+$('stIn').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const ext = f.name.split('.').pop().toLowerCase();
+  stStatus('Открываю ' + f.name + '…');
+  try {
+    const buf = await f.arrayBuffer(); let root;
+    if (ext === 'glb' || ext === 'gltf') root = await new Promise((res, rej) => new THREE.GLTFLoader().parse(buf, '', g => res(g.scene), rej));
+    else if (ext === 'fbx') root = new THREE.FBXLoader().parse(buf, '');
+    else if (ext === 'obj') root = new THREE.OBJLoader().parse(new TextDecoder().decode(buf));
+    else throw new Error('формат .' + ext + ' не поддерживается');
+    ingest(root, f.name); stStatus('Загружено. Подвиньте суставы под модель.');
+  } catch (err) { stStatus('Не удалось открыть файл: ' + (err.message || err)); }
+  e.target.value = '';
+});
+
+function sampleFigure(){
+  const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({color: col('--mesh'), roughness: 0.7});
+  const box = (w, h, d, x, y, sx, sy, sz) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d, sx, sy, sz), m); b.position.set(x, y, 0); g.add(b); };
+  box(.38,.62,.22, 0,1.18, 4,8,2); box(.24,.26,.24, 0,1.62, 2,2,2); box(.34,.16,.2, 0,.84, 4,2,2);
+  [1,-1].forEach(s => { box(.66,.1,.1, s*.52,1.42, 12,1,1); box(.13,.86,.13, s*.1,.43, 1,12,1); });
+  return g;
+}
+$('stSample').addEventListener('click', () => { ingest(sampleFigure(), 'пример'); stStatus(''); });
+
+const dlP = (async () => { try { return window.claude && claude.use ? await claude.use('downloads') : null; } catch { return null; } })();
+dlP.then(d => { $('bExport').textContent = d ? 'Скачать .glb (в zip)' : 'Скачать .glb'; });
+$('bExport').addEventListener('click', async () => {
+  if (!S.joints.length) return stStatus('Нет костей. Нажмите шаблон или «+ Кость».');
+  const dl = await dlP;
+  stStatus('Собираю файл…');
+  try {
+    const {group} = buildSkinned(); // fresh copy in rest pose, independent of the pose being tested
+    const glb = await new Promise((res, rej) => { try { new THREE.GLTFExporter().parse(group, res, {binary: true}); } catch (e) { rej(e); } });
+    if (!dl){ // ordinary website (e.g. GitHub Pages): a plain browser download
+      const url = URL.createObjectURL(new Blob([glb], {type: 'model/gltf-binary'}));
+      const a = document.createElement('a'); a.href = url; a.download = S.name + '_rigged.glb';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+      return stStatus('Скачано: ' + S.name + '_rigged.glb');
+    }
+    const zip = new JSZip(); zip.file(S.name + '_rigged.glb', glb);
+    const blob = await zip.generateAsync({type: 'blob'});
+    await dl.save({filename: S.name + '_rigged.zip', data: blob});
+    stStatus('Сохранено: ' + S.name + '_rigged.zip');
+  } catch (e) {
+    stStatus(e && e.code === 'declined' ? 'Скачивание отменено.' : e && e.code === 'rate_limited' ? 'Окно сохранения уже открыто, подождите.' : 'Не получилось: ' + ((e && (e.message || e.code)) || e));
+  }
+});
+
+ingest(sampleFigure(), 'пример');
+
+const retheme = () => { M.refreshGrid(); E.refreshGrid(); R.refreshGrid(); SV.refreshGrid(); build(); buildExt(); buildRig(); drawGraph(); drawOverlay(); select(S.sel); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+new MutationObserver(retheme).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+build(); buildExt(); buildRig(); drawGraph();
+</script>
+</body></html>
