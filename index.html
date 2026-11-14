@@ -560,6 +560,17 @@ footer{border-top:1px solid var(--line);padding-top:20px;font-size:14px;color:va
         <button class="tog" id="stSample">Пример</button>
         <span class="muted" style="font-size:14px">.glb, .gltf одним файлом, .fbx, .obj</span>
       </div>
+      <div class="row" role="group" aria-label="Повернуть модель">
+        <label class="lbl">Повернуть</label>
+        <button class="tog" id="rotX">↻ X 90°</button>
+        <button class="tog" id="rotY">↻ Y 90°</button>
+        <button class="tog" id="rotZ">↻ Z 90°</button>
+        <span class="muted" style="font-size:14px">лежит лицом вниз — жмите «X», пока не встанет</span>
+      </div>
+      <div class="row">
+        <label class="lbl" for="light">Свет</label>
+        <input id="light" type="range" min="0.3" max="3" step="0.05" value="1.4"><span class="val" id="lightV">140%</span>
+      </div>
       <div class="row seg" role="group" aria-label="Режим">
         <label class="lbl">Режим</label>
         <button id="mEdit" aria-pressed="true">Кости (расстановка)</button>
@@ -604,7 +615,7 @@ footer{border-top:1px solid var(--line);padding-top:20px;font-size:14px;color:va
     <div class="stack">
       <h3>Как пользоваться</h3>
       <ul class="check">
-        <li>Загрузите модель. Она должна стоять прямо, лицом к вам, лучше в T- или A-позе (руки в стороны или чуть вниз).</li>
+        <li>Загрузите модель. Она должна стоять прямо, лицом к вам, лучше в T- или A-позе (руки в стороны или чуть вниз). Лежит или смотрит вбок — поверните кнопками «↻ X / Y / Z». Темно — сдвиньте ползунок «Свет» вправо.</li>
         <li>Нажмите <b>«Расставить по шагам»</b>. Модель повернётся лицом к вам, а сайт по очереди попросит кликнуть в 10 мест: таз, грудь, шею, голову, затем левую руку и левую ногу. Правая сторона достроится зеркально. Ошиблись — «Назад».</li>
         <li>Нажмите <b>«Поза (проверка)»</b>, кликните по любому суставу и крутите цветные кольца. Рука должна гнуться в локте, нога в колене.</li>
         <li>Если что-то тянется не туда, вернитесь в «Кости», кликните по суставу и подвиньте его стрелками. С «Симметрией X» парный сустав двигается сам.</li>
@@ -615,6 +626,7 @@ footer{border-top:1px solid var(--line);padding-top:20px;font-size:14px;color:va
     </div>
     <div class="stack">
       <h3>Что дальше с файлом</h3>
+      <p><b>Чтобы модель из Blender сразу стояла:</b> в окне экспорта FBX поставьте Forward: -Z Forward, Up: Y Up, а в glTF включите +Y Up (Transform). Перед экспортом примените поворот: <kbd>Ctrl</kbd>+<kbd>A</kbd> → Rotation.</p>
       <p><b>Blender:</b> File → Import → glTF 2.0. Скелет появится как Armature, веса можно поправить в Weight Paint.</p>
       <p><b>Unity:</b> .glb открывается пакетом glTFast. Другой путь: импортировать в Blender и экспортировать в FBX.</p>
       <p class="muted"><b>Ограничения.</b> Веса считаются просто, по расстоянию до кости, и хуже, чем в Blender: у подмышек и между ног руки могут «прилипать» к телу. Скелет и веса из загруженного файла сохраняются, а анимации отбрасываются. Если кость из файла подвинуть, её старые веса останутся прежними. Тогда нажмите «Пересчитать веса из файла». Текстуры из отдельных файлов не подхватятся, для моделей с текстурами берите .glb.</p>
@@ -699,9 +711,9 @@ function makeViewer(canvas, pos){
   cam.position.set(...pos);
   const ctl = new THREE.OrbitControls(cam, canvas);
   ctl.enableDamping = true; ctl.target.set(0, 0.2, 0);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x556070, 0.85));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x556070, 0.85); scene.add(hemi);
   const dl = new THREE.DirectionalLight(0xffffff, 0.75); dl.position.set(3, 5, 4); scene.add(dl);
-  const v = {scene, cam, ctl, canvas, grid:null, axes:null, gridY:-0.8, gridScale:1};
+  const v = {scene, cam, ctl, canvas, renderer: r, hemi, dl, grid:null, axes:null, gridY:-0.8, gridScale:1};
   v.refreshGrid = () => {
     if (v.grid) scene.remove(v.grid, v.axes);
     v.grid = new THREE.GridHelper(6, 12, col('--grid'), col('--grid')); v.grid.position.y = v.gridY; v.grid.scale.setScalar(v.gridScale);
@@ -876,6 +888,11 @@ document.getElementById('interp').addEventListener('change', e => { rs.interp = 
 const V3 = THREE.Vector3;
 const SV = makeViewer(document.getElementById('cStudio'), [2.4, 1.6, 3.6]);
 const S = {meshes:[], joints:[], sel:-1, mode:'edit', mirror:true, showW:false, name:'example', h:1.8, cx:0, plain:null, rigged:null, markers:null, lines:null};
+// imported glTF textures are sRGB; without sRGB output they render too dark
+SV.renderer.outputEncoding = THREE.sRGBEncoding;
+const camLight = new THREE.DirectionalLight(0xffffff, 0.6); // "headlight": always lights the side you look at
+camLight.position.set(0, 0, 1); SV.cam.add(camLight); camLight.target.position.set(0, 0, -1); SV.cam.add(camLight.target); SV.scene.add(SV.cam);
+function setLight(k){ SV.hemi.intensity = 0.85*k; SV.dl.intensity = 0.75*k; camLight.intensity = 0.6*k; $('lightV').textContent = Math.round(k*100) + '%'; }
 const $ = id => document.getElementById(id);
 const stStatus = t => $('stStatus').textContent = t;
 const tc = new THREE.TransformControls(SV.cam, SV.canvas);
@@ -914,12 +931,7 @@ function ingest(root, name){
   });
   if (!meshes.length) throw new Error('в файле нет мешей');
   S.meshes = meshes; S.name = name.replace(/\.[^.]+$/, '') || 'model'; S.sel = -1;
-  const bb = new THREE.Box3(); meshes.forEach(m => { m.g.computeBoundingBox(); bb.union(m.g.boundingBox); });
-  const size = bb.getSize(new V3()), c = bb.getCenter(new V3());
-  S.bb = bb; S.h = size.y || 1; S.cx = c.x;
-  SV.gridY = bb.min.y; SV.gridScale = S.h / 1.8; SV.refreshGrid();
-  SV.cam.near = S.h / 200; SV.cam.far = S.h * 200; SV.cam.updateProjectionMatrix();
-  SV.cam.position.copy(c).add(new V3(S.h*0.8, S.h*0.25, S.h*1.7)); SV.ctl.target.copy(c);
+  refit();
   $('stFile').textContent = name;
   $('stV').textContent = meshes.reduce((a, m) => a + m.g.attributes.position.count, 0).toLocaleString('ru');
   if (fileJoints.length){
@@ -927,6 +939,29 @@ function ingest(root, name){
     stStatus('В файле найден скелет: ' + fileJoints.length + ' костей. Кликните по суставу и «+ Кость», чтобы дорисовать новые.');
   } else { tplHumanoid(); stStatus('Скелета в файле нет. Нажмите «Расставить по шагам».'); }
   setMode('edit');
+}
+
+function refit(){
+  const bb = new THREE.Box3(); S.meshes.forEach(m => { m.g.computeBoundingBox(); bb.union(m.g.boundingBox); });
+  const size = bb.getSize(new V3()), c = bb.getCenter(new V3());
+  S.bb = bb; S.h = size.y || 1; S.cx = c.x;
+  const span = Math.max(size.x, size.y, size.z) || 1; // camera distance by the largest side, so a lying model still fits
+  SV.gridY = bb.min.y; SV.gridScale = span / 1.8; SV.refreshGrid();
+  SV.cam.near = span / 200; SV.cam.far = span * 200; SV.cam.updateProjectionMatrix();
+  SV.cam.position.copy(c).add(new V3(span*0.8, span*0.25, span*1.7)); SV.ctl.target.copy(c);
+}
+
+// Blender is Z-up; a model exported without axis conversion lies on its face. Rotate it 90° around the chosen axis.
+function rotateModel(axis){
+  if (S.wiz) wizCancel();
+  const c = S.bb.getCenter(new V3()), M = THREE.Matrix4;
+  const m = new M().makeTranslation(c.x, c.y, c.z).multiply(new M().makeRotationAxis(axis, Math.PI/2)).multiply(new M().makeTranslation(-c.x, -c.y, -c.z));
+  S.meshes.forEach(x => x.g.applyMatrix4(m));
+  const fromFile = S.joints.some(j => j.orig);
+  if (fromFile) S.joints.forEach(j => j.pos.applyMatrix4(m));
+  refit();
+  if (!fromFile) tplHumanoid(); // a template fitted to the lying model is useless, fit a new one
+  S.sel = -1; setMode(S.mode);
 }
 
 function tplHumanoid(){
@@ -1157,6 +1192,11 @@ SV.canvas.addEventListener('pointerup', e => {
 
 $('mEdit').addEventListener('click', () => setMode('edit'));
 $('mPose').addEventListener('click', () => setMode('pose'));
+$('light').addEventListener('input', e => setLight(+e.target.value));
+setLight(+$('light').value);
+$('rotX').addEventListener('click', () => rotateModel(new V3(1, 0, 0)));
+$('rotY').addEventListener('click', () => rotateModel(new V3(0, 1, 0)));
+$('rotZ').addEventListener('click', () => rotateModel(new V3(0, 0, 1)));
 $('tRe').addEventListener('click', e => { S.reweight = !S.reweight; e.target.setAttribute('aria-pressed', S.reweight); if (S.mode === 'pose') setMode('pose'); });
 $('bWiz').addEventListener('click', wizStart);
 $('wCancel').addEventListener('click', () => { wizCancel(); stStatus(''); });
