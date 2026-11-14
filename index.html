@@ -935,12 +935,12 @@ function tplHumanoid(){
   add('Hips', null, 0, .53); add('Spine', 'Hips', 0, .62); add('Chest', 'Spine', 0, .72); add('Neck', 'Chest', 0, .84); add('Head', 'Neck', 0, .90);
   const tpose = w > 0.6*h, reach = w/2*0.85;
   [['L',1],['R',-1]].forEach(([n,s]) => {
-    add('Shoulder.'+n, 'Chest', s*.07*h, .80);
-    add('UpperArm.'+n, 'Shoulder.'+n, s*.17*h, .80);
-    if (tpose){ add('LowerArm.'+n, 'UpperArm.'+n, s*(.17*h + reach)/2, .80); add('Hand.'+n, 'LowerArm.'+n, s*reach, .80); }
-    else { add('LowerArm.'+n, 'UpperArm.'+n, s*.21*h, .64); add('Hand.'+n, 'LowerArm.'+n, s*.24*h, .50); }
-    add('UpperLeg.'+n, 'Hips', s*.09*h, .50); add('LowerLeg.'+n, 'UpperLeg.'+n, s*.09*h, .28);
-    add('Foot.'+n, 'LowerLeg.'+n, s*.09*h, .05); add('Toes.'+n, 'Foot.'+n, s*.09*h, .01, .07*h);
+    add('Shoulder_'+n, 'Chest', s*.07*h, .80);
+    add('UpperArm_'+n, 'Shoulder_'+n, s*.17*h, .80);
+    if (tpose){ add('LowerArm_'+n, 'UpperArm_'+n, s*(.17*h + reach)/2, .80); add('Hand_'+n, 'LowerArm_'+n, s*reach, .80); }
+    else { add('LowerArm_'+n, 'UpperArm_'+n, s*.21*h, .64); add('Hand_'+n, 'LowerArm_'+n, s*.24*h, .50); }
+    add('UpperLeg_'+n, 'Hips', s*.09*h, .50); add('LowerLeg_'+n, 'UpperLeg_'+n, s*.09*h, .28);
+    add('Foot_'+n, 'LowerLeg_'+n, s*.09*h, .05); add('Toes_'+n, 'Foot_'+n, s*.09*h, .01, .07*h);
   });
   S.joints = J; S.sel = -1;
 }
@@ -1058,12 +1058,12 @@ const WIZ = [
   ['Chest', 'грудь: середину груди'],
   ['Neck', 'шею: где она переходит в плечи'],
   ['Head', 'голову: место под подбородком'],
-  ['UpperArm.L', 'левое плечо, где рука крепится к телу'],
-  ['LowerArm.L', 'левый локоть'],
-  ['Hand.L', 'левое запястье'],
-  ['UpperLeg.L', 'левое бедро, верх ноги'],
-  ['LowerLeg.L', 'левое колено'],
-  ['Foot.L', 'левую лодыжку'],
+  ['UpperArm_L', 'левое плечо, где рука крепится к телу'],
+  ['LowerArm_L', 'левый локоть'],
+  ['Hand_L', 'левое запястье'],
+  ['UpperLeg_L', 'левое бедро, верх ноги'],
+  ['LowerLeg_L', 'левое колено'],
+  ['Foot_L', 'левую лодыжку'],
 ];
 function wizStart(){
   if (S.mode !== 'edit') setMode('edit');
@@ -1074,7 +1074,7 @@ function wizStart(){
 }
 function wizShow(){
   const [name, text] = WIZ[S.wiz.step];
-  $('wizText').textContent = `Шаг ${S.wiz.step + 1} из ${WIZ.length}: кликните по модели в точку — ${text}.` + (name.endsWith('.L') ? ' Левое у персонажа — справа на экране.' : '');
+  $('wizText').textContent = `Шаг ${S.wiz.step + 1} из ${WIZ.length}: кликните по модели в точку — ${text}.` + (name.endsWith('_L') ? ' Левое у персонажа — справа на экране.' : '');
   $('rowWiz').hidden = false; $('rowEdit').hidden = $('rowAdv').hidden = $('rowName').hidden = true;
   S.joints = Object.entries(S.wiz.pts).map(([n, p]) => ({name: n, parent: -1, pos: p}));
   S.sel = -1; drawOverlay(); select(-1);
@@ -1101,11 +1101,11 @@ function wizClick(rc){
   add('Neck', 'Chest', P.Neck); add('Head', 'Neck', P.Head);
   ['L', 'R'].forEach(s => {
     const f = v => s === 'L' ? v.clone() : new V3(2*hx - v.x, v.y, v.z);
-    const ua = f(P['UpperArm.L']), foot = f(P['Foot.L']);
-    add('Shoulder.'+s, 'Chest', new V3(P.Neck.x + (ua.x - P.Neck.x)*0.4, ua.y, ua.z));
-    add('UpperArm.'+s, 'Shoulder.'+s, ua); add('LowerArm.'+s, 'UpperArm.'+s, f(P['LowerArm.L'])); add('Hand.'+s, 'LowerArm.'+s, f(P['Hand.L']));
-    add('UpperLeg.'+s, 'Hips', f(P['UpperLeg.L'])); add('LowerLeg.'+s, 'UpperLeg.'+s, f(P['LowerLeg.L']));
-    add('Foot.'+s, 'LowerLeg.'+s, foot); add('Toes.'+s, 'Foot.'+s, new V3(foot.x, S.bb.min.y + S.h*0.01, foot.z + S.h*0.07));
+    const ua = f(P['UpperArm_L']), foot = f(P['Foot_L']);
+    add('Shoulder_'+s, 'Chest', new V3(P.Neck.x + (ua.x - P.Neck.x)*0.4, ua.y, ua.z));
+    add('UpperArm_'+s, 'Shoulder_'+s, ua); add('LowerArm_'+s, 'UpperArm_'+s, f(P['LowerArm_L'])); add('Hand_'+s, 'LowerArm_'+s, f(P['Hand_L']));
+    add('UpperLeg_'+s, 'Hips', f(P['UpperLeg_L'])); add('LowerLeg_'+s, 'UpperLeg_'+s, f(P['LowerLeg_L']));
+    add('Foot_'+s, 'LowerLeg_'+s, foot); add('Toes_'+s, 'Foot_'+s, new V3(foot.x, S.bb.min.y + S.h*0.01, foot.z + S.h*0.07));
   });
   S.joints = J; wizEnd(); S.sel = -1; drawOverlay(); select(-1);
   stStatus('Скелет готов: ' + J.length + ' костей. Нажмите «Поза (проверка)» и покрутите суставы.');
@@ -1131,7 +1131,8 @@ function setMode(m){
 }
 
 const mirrorOf = i => {
-  const n = S.joints[i].name, o = /\.L$/.test(n) ? n.replace(/\.L$/, '.R') : /\.R$/.test(n) ? n.replace(/\.R$/, '.L') : null;
+  // "_L" survives glTF name sanitizing (dots are stripped on load); Blender pairs both ".L" and "_L"
+  const mm = S.joints[i].name.match(/^(.*[._])([LR])$/), o = mm ? mm[1] + (mm[2] === 'L' ? 'R' : 'L') : null;
   return o ? S.joints.findIndex(j => j.name === o) : -1;
 };
 tc.addEventListener('objectChange', () => {
